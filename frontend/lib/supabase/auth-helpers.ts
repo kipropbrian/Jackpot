@@ -69,3 +69,18 @@ export const signOut = async () => {
     throw error;
   }
 };
+
+/**
+ * Update user profile metadata
+ */
+export const updateUserProfile = async (userData: { full_name?: string }) => {
+  const { data, error } = await supabase.auth.updateUser({
+    data: userData
+  });
+  
+  if (error) {
+    throw error;
+  }
+  
+  return data.user;
+};
