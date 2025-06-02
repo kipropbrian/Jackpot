@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { User, Session } from '@supabase/supabase-js';
-import { signInWithEmail, signUpWithEmail, signOut, getUser, getSession } from '../supabase/auth-helpers';
+import { signInWithEmail, signUpWithEmail, signOut, getUser, getSession, updateUserProfile } from '../supabase/auth-helpers';
 
 interface AuthState {
   user: User | null;
@@ -13,7 +13,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => Promise<void>;
-  updateProfile: (data: { full_name?: string }) => Promise<void>;
+  updateProfile: (data: { full_name?: string }) => Promise<User>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -70,11 +70,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   updateProfile: async (data) => {
-    // This will be implemented when we have the profile update functionality
     set({ loading: true, error: null });
     try {
-      // TODO: Implement profile update
-      set({ loading: false });
+      const user = await updateUserProfile(data);
+      set({ 
+        user, 
+        loading: false,
+        error: null
+      });
+      return user;
     } catch (error) {
       console.error('Profile update error:', error);
       set({ loading: false, error: (error as Error).message });

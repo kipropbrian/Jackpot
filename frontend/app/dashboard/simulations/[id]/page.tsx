@@ -1,0 +1,295 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useSimulations } from '@/lib/hooks/use-simulations';
+import { Simulation } from '@/lib/api/types';
+
+export default function SimulationDetailsPage({ params }: { params: { id: string } }) {
+  const router = useRouter();
+  const { getSimulation, updateSimulation, deleteSimulation, isLoading, error } = useSimulations({ autoFetch: false });
+  const [simulation, setSimulation] = useState<Simulation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const fetchSimulation = async () => {
+      try {
+        const data = await getSimulation(params.id);
+        setSimulation(data);
+      } catch (err) {
+        console.error('Error fetching simulation:', err);
+      }
+    };
+
+    fetchSimulation();
+  }, [params.id, getSimulation]);
+
+  const handleDelete = async () => {
+    if (!simulation) return;
+    
+    if (window.confirm('Are you sure you want to delete this simulation? This action cannot be undone.')) {
+      setIsDeleting(true);
+      try {
+        await deleteSimulation(simulation.id);
+        router.push('/dashboard/simulations');
+      } catch (err) {
+        console.error('Error deleting simulation:', err);
+        setIsDeleting(false);
+      }
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Format status for display with appropriate color
+  const getStatusBadge = (status: string) => {
+    let color = '';
+    switch (status) {
+      case 'pending':
+        color = 'bg-yellow-100 text-yellow-800';
+        break;
+      case 'running':
+        color = 'bg-blue-100 text-blue-800';
+        break;
+      case 'completed':
+        color = 'bg-green-100 text-green-800';
+        break;
+      case 'failed':
+        color = 'bg-red-100 text-red-800';
+        break;
+      default:
+        color = 'bg-gray-100 text-gray-800';
+    }
+    
+    return (
+      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white shadow rounded-lg p-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white shadow rounded-lg p-8">
+        <div className="text-red-500">
+          Error loading simulation: {error.message}
+        </div>
+        <div className="mt-4">
+          <Link
+            href="/dashboard/simulations"
+            className="text-blue-600 hover:text-blue-800"
+          >
+            &larr; Back to simulations
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!simulation) {
+    return (
+      <div className="bg-white shadow rounded-lg p-8">
+        <div className="text-gray-500">
+          Simulation not found
+        </div>
+        <div className="mt-4">
+          <Link
+            href="/dashboard/simulations"
+            className="text-blue-600 hover:text-blue-800"
+          >
+            &larr; Back to simulations
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-lg leading-6 font-medium text-gray-900">
+              {simulation.name}
+            </h1>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Simulation Details
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <Link
+              href="/dashboard/simulations"
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Back to List
+            </Link>
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Simulation Details */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <h2 className="text-lg leading-6 font-medium text-gray-900">Simulation Information</h2>
+          <p className="mt-1 max-w-2xl text-sm text-gray-500">
+            Details and parameters of this simulation
+          </p>
+        </div>
+        <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
+          <dl className="sm:divide-y sm:divide-gray-200">
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Status</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {getStatusBadge(simulation.status)}
+                {simulation.status === 'running' && (
+                  <div className="mt-2">
+                    <div className="bg-gray-200 rounded-full h-2.5 w-full">
+                      <div 
+                        className="bg-blue-600 h-2.5 rounded-full" 
+                        style={{ width: `${simulation.progress}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-gray-500">{simulation.progress}% complete</span>
+                  </div>
+                )}
+              </dd>
+            </div>
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Total Combinations</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {simulation.total_combinations.toLocaleString()}
+              </dd>
+            </div>
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Cost Per Bet</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                KES {simulation.cost_per_bet.toLocaleString()}
+              </dd>
+            </div>
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Total Cost</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                KES {simulation.total_cost.toLocaleString()}
+              </dd>
+            </div>
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Created At</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {formatDate(simulation.created_at)}
+              </dd>
+            </div>
+            {simulation.completed_at && (
+              <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500">Completed At</dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {formatDate(simulation.completed_at)}
+                </dd>
+              </div>
+            )}
+          </dl>
+        </div>
+      </div>
+
+      {/* Simulation Results */}
+      {simulation.status === 'completed' && simulation.results && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:px-6">
+            <h2 className="text-lg leading-6 font-medium text-gray-900">Simulation Results</h2>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Summary of simulation outcomes
+            </p>
+          </div>
+          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Win Rate
+                  </dt>
+                  <dd className="mt-1 text-3xl font-semibold text-gray-900">
+                    {simulation.results.win_rate ? `${simulation.results.win_rate}%` : 'N/A'}
+                  </dd>
+                </div>
+              </div>
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Total Winnings
+                  </dt>
+                  <dd className="mt-1 text-3xl font-semibold text-gray-900">
+                    {simulation.results.total_winnings 
+                      ? `KES ${simulation.results.total_winnings.toLocaleString()}`
+                      : 'N/A'
+                    }
+                  </dd>
+                </div>
+              </div>
+              <div className="bg-white overflow-hidden shadow rounded-lg">
+                <div className="px-4 py-5 sm:p-6">
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Net Profit/Loss
+                  </dt>
+                  <dd className={`mt-1 text-3xl font-semibold ${
+                    simulation.results.net_profit && simulation.results.net_profit >= 0
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}>
+                    {simulation.results.net_profit
+                      ? `KES ${Math.abs(simulation.results.net_profit).toLocaleString()}`
+                      : 'N/A'
+                    }
+                    {simulation.results.net_profit && (
+                      <span className="text-sm ml-1">
+                        {simulation.results.net_profit >= 0 ? 'profit' : 'loss'}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional results could be shown here */}
+            {simulation.results.details && (
+              <div className="mt-6">
+                <h3 className="text-sm font-medium text-gray-700 mb-3">Detailed Results</h3>
+                <div className="bg-gray-50 p-4 rounded-md">
+                  <pre className="text-xs overflow-auto">
+                    {JSON.stringify(simulation.results.details, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

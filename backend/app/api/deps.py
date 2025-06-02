@@ -20,8 +20,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # Verify the token with Supabase
         response = supabase.auth.get_user(token)
         
-        # Return the user data
-        return response.user
+        # Convert User object to dictionary
+        user_dict = {
+            "id": response.user.id,
+            "email": response.user.email,
+            "app_metadata": response.user.app_metadata,
+            "user_metadata": response.user.user_metadata
+        }
+        
+        # Return the user data as a dictionary
+        return user_dict
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

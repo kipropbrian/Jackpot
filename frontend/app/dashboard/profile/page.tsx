@@ -26,9 +26,8 @@ export default function ProfilePage() {
     setMessage({ type: '', text: '' });
 
     try {
-      // This is a placeholder for the actual profile update functionality
-      // We'll implement this in a future task
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      // Update user profile with new full name
+      await useAuthStore.getState().updateProfile({ full_name: fullName });
       
       setMessage({ type: 'success', text: 'Profile updated successfully' });
       setIsEditing(false);
