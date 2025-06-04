@@ -139,7 +139,7 @@ export default function Home() {
                 </div>
                 <h1 className="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
                   <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-500">
-                    Beat The Odds
+                    You can't beat the odds
                   </span>
                 </h1>
                 <p className="text-2xl md:text-3xl font-bold mb-6 text-gray-200">

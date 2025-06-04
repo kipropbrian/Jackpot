@@ -115,7 +115,7 @@ export default function NewSimulationPage() {
                 id="name"
                 value={formData.name}
                 onChange={handleChange}
-                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${
+                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full p-3 text-gray-900 sm:text-sm border-gray-300 rounded-md ${
                   formErrors.name ? 'border-red-300' : ''
                 }`}
                 placeholder="My Jackpot Simulation"
@@ -142,7 +142,7 @@ export default function NewSimulationPage() {
                 max="10000"
                 value={formData.total_combinations}
                 onChange={handleChange}
-                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${
+                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full p-3 text-gray-900 sm:text-sm border-gray-300 rounded-md ${
                   formErrors.total_combinations ? 'border-red-300' : ''
                 }`}
               />
@@ -167,7 +167,7 @@ export default function NewSimulationPage() {
                 min="1"
                 value={formData.cost_per_bet}
                 onChange={handleChange}
-                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md ${
+                className={`shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full p-3 text-gray-900 sm:text-sm border-gray-300 rounded-md ${
                   formErrors.cost_per_bet ? 'border-red-300' : ''
                 }`}
               />
