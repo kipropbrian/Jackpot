@@ -16,6 +16,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', current: pathname === '/dashboard' },
+    { name: 'Jackpots', href: '/dashboard/jackpots', current: pathname.startsWith('/dashboard/jackpots') },
     { name: 'Simulations', href: '/dashboard/simulations', current: pathname.startsWith('/dashboard/simulations') },
     { name: 'Profile', href: '/dashboard/profile', current: pathname === '/dashboard/profile' },
   ];

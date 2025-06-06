@@ -17,7 +17,7 @@ def scrape_sportpesa_jackpot():
     try:
         scraper = SportPesaScraper()
         scraped_data = scraper.scrape() # Scraper is synchronous
-        print(f"Scraped data: {scraped_data}")
+
         if scraped_data:
             try:
                 # --- Jackpot Data Handling ---

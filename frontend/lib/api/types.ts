@@ -33,3 +33,32 @@ export interface SimulationListResponse {
   simulations: Simulation[];
   total: number;
 }
+
+export interface Game {
+  id: string;
+  game_api_id: string;
+  home_team: string;
+  away_team: string;
+  kick_off_time: string;
+  tournament?: string;
+  country?: string;
+  odds_home?: number;
+  odds_draw?: number;
+  odds_away?: number;
+  score_home?: number;
+  score_away?: number;
+  game_order?: number;
+  betting_status?: string;
+}
+
+export interface Jackpot {
+  id: string;
+  jackpot_api_id: string;
+  name: string;
+  current_amount: number;
+  total_matches: number;
+  scraped_at: string;
+  games: Game[];
+}
+
+export type JackpotListResponse = Jackpot[];
