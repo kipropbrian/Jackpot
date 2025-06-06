@@ -9,6 +9,7 @@ class SimulationBase(BaseModel):
     name: str
     total_combinations: int
     cost_per_bet: Decimal
+    jackpot_id: str
     
 class SimulationCreate(SimulationBase):
     """Schema for creating a new simulation"""
@@ -42,6 +43,7 @@ class SimulationResponse(SimulationInDB):
     user_id: str
     total_cost: float
     cost_per_bet: float
+    jackpot_id: str
     created_at: str
     completed_at: Optional[str] = None
 

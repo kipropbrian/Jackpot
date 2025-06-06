@@ -6,14 +6,18 @@ export interface SimulationFormValues {
   name: string;
   total_combinations: number;
   cost_per_bet: number;
+  jackpot_id: string;
 }
 
 interface SimulationFormProps {
   onSubmit?: (values: SimulationFormValues) => void;
 }
 
+import { useJackpots } from '@/lib/hooks/use-jackpots';
+
 const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
   const { simulations } = useSimulations({ autoFetch: true });
+  const { jackpots, loading: jackpotsLoading, error: jackpotsError } = useJackpots();
   // Format today's date as dd/mm/yy
   const today = new Date();
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -27,6 +31,7 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
     name: defaultName,
     total_combinations: 100,
     cost_per_bet: 50,
+    jackpot_id: '',
   });
 
   // Update name if totalCount changes (e.g., after a new simulation is created)
@@ -42,11 +47,12 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
     if (!values.name.trim()) errs.name = "Name is required";
     if (!values.total_combinations || isNaN(Number(values.total_combinations))) errs.total_combinations = "Enter a valid number of combinations";
     if (!values.cost_per_bet || isNaN(Number(values.cost_per_bet))) errs.cost_per_bet = "Enter a valid cost per bet";
+    if (!values.jackpot_id) errs.jackpot_id = "Please select a jackpot";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setValues((prev) => ({ ...prev, [name]: value }));
   };
@@ -61,6 +67,7 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
           name: values.name.trim(),
           total_combinations: Number(values.total_combinations),
           cost_per_bet: Number(values.cost_per_bet),
+          jackpot_id: values.jackpot_id,
         });
       }
     } finally {
@@ -71,6 +78,26 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
   return (
     <form onSubmit={handleSubmit} className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 space-y-6">
       <h2 className="text-2xl font-bold mb-4 text-gray-800">Create Simulation</h2>
+      <div>
+        <label className="block text-gray-700 font-semibold mb-1" htmlFor="jackpot_id">Jackpot</label>
+        <select
+          id="jackpot_id"
+          name="jackpot_id"
+          value={values.jackpot_id}
+          onChange={handleChange}
+          className={`w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-gray-900 ${errors.jackpot_id ? 'border-red-500' : 'border-gray-300'}`}
+          disabled={jackpotsLoading}
+        >
+          <option value="">Select a jackpot</option>
+          {jackpots && jackpots.map(jackpot => (
+            <option key={jackpot.id} value={jackpot.id}>
+              {jackpot.name} ({jackpot.total_matches} games)
+            </option>
+          ))}
+        </select>
+        {errors.jackpot_id && <div className="text-red-600 text-xs mt-1">{errors.jackpot_id}</div>}
+        {jackpotsError && <div className="text-red-600 text-xs mt-1">Failed to load jackpots</div>}
+      </div>
       <div>
         <label className="block text-gray-700 font-semibold mb-1" htmlFor="name">Simulation Name</label>
         <input

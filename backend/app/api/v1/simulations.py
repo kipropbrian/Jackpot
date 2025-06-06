@@ -32,7 +32,8 @@ async def create_simulation(
         "cost_per_bet": float(simulation.cost_per_bet),
         "total_cost": float(total_cost),
         "status": "pending",
-        "progress": 0
+        "progress": 0,
+        "jackpot_id": simulation.jackpot_id
     }
     
     try:
