@@ -7,7 +7,7 @@ def get_supabase_client() -> Client:
     """
     if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
         raise ValueError("Missing Supabase environment variables")
-    
+
     return create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 # Create a global instance of the Supabase client
