@@ -2,6 +2,7 @@
 
 // Simulation types
 export interface Simulation {
+  jackpot_id: string;
   id: string;
   user_id: string;
   name: string;

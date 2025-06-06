@@ -11,6 +11,9 @@ export default function SimulationDetailsPage({ params }: { params: { id: string
   const { getSimulation, updateSimulation, deleteSimulation, isLoading, error } = useSimulations({ autoFetch: false });
   const [simulation, setSimulation] = useState<Simulation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // Progress polling
+  const [progress, setProgress] = useState<number | null>(null);
+  const [polling, setPolling] = useState(false);
 
   useEffect(() => {
     const fetchSimulation = async () => {
@@ -24,6 +27,32 @@ export default function SimulationDetailsPage({ params }: { params: { id: string
 
     fetchSimulation();
   }, [params.id, getSimulation]);
+
+  // Poll for progress if simulation is running
+  useEffect(() => {
+    if (!simulation) return;
+    if (simulation.status === 'running') {
+      setPolling(true);
+      setProgress(simulation.progress);
+      const interval = setInterval(async () => {
+        try {
+          const updated = await getSimulation(params.id);
+          setSimulation(updated);
+          setProgress(updated.progress);
+          if (updated.status !== 'running') {
+            clearInterval(interval);
+            setPolling(false);
+          }
+        } catch (err) {
+          // Optionally handle error
+        }
+      }, 3000); // Poll every 3 seconds
+      return () => clearInterval(interval);
+    } else {
+      setPolling(false);
+      setProgress(simulation.progress);
+    }
+  }, [simulation, getSimulation, params.id]);
 
   const handleDelete = async () => {
     if (!simulation) return;
@@ -136,6 +165,26 @@ export default function SimulationDetailsPage({ params }: { params: { id: string
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
               Simulation Details
             </p>
+            {/* Progress Bar */}
+            {typeof simulation.progress === 'number' && (
+              <div className="mt-4">
+                <div className="flex items-center mb-1">
+                  <span className="text-xs text-gray-500 mr-2">Progress:</span>
+                  <span className="text-xs font-semibold text-gray-700">
+                    {simulation.progress}%
+                  </span>
+                  {simulation.status === 'running' && (
+                    <span className="ml-2 text-xs text-blue-500 animate-pulse">(updating...)</span>
+                  )}
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-300">
+                  <div
+                    className={`h-3 rounded-full ${simulation.status === 'completed' ? 'bg-green-500' : simulation.status === 'failed' ? 'bg-red-500' : 'bg-blue-500'}`}
+                    style={{ width: `${simulation.progress}%`, transition: 'width 0.5s' }}
+                  ></div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex space-x-3">
             <Link

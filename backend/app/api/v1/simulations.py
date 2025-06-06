@@ -1,6 +1,6 @@
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, status, BackgroundTasks
 from app.schemas.simulation import (
     SimulationCreate,
     SimulationUpdate,
@@ -10,12 +10,14 @@ from app.schemas.simulation import (
 from app.config.database import supabase
 from app.api.deps import get_current_user
 from decimal import Decimal
+from app.services.combination_generator import CombinationGenerator
 
 router = APIRouter()
 
 @router.post("/", response_model=SimulationResponse, status_code=status.HTTP_201_CREATED)
 async def create_simulation(
     simulation: SimulationCreate,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -45,8 +47,16 @@ async def create_simulation(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create simulation"
             )
-        
-        return response.data[0]
+        sim_obj = response.data[0]
+        # Trigger background combination generation
+        background_tasks.add_task(
+            CombinationGenerator(
+                simulation_id=sim_obj["id"],
+                jackpot_id=sim_obj["jackpot_id"],
+                total_combinations=sim_obj["total_combinations"]
+            ).generate_unique_combinations
+        )
+        return sim_obj
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
