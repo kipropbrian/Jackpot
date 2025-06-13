@@ -1,10 +1,10 @@
 import requests
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 
 # API URLs
 MULTI_JACKPOT_API_URL = "https://www.ke.sportpesa.com/api/jackpots/multi"
-GAMES_API_URL = "https://jackpot-offer-api.ke.sportpesa.com/api/jackpots/active" # Renamed for clarity
-
+GAMES_API_URL = "https://jackpot-offer-api.ke.sportpesa.com/api/jackpots/active" 
 # Headers based on the provided cURL command
 COOKIE_STRING = 'visited=1; settings=%7B%22markets_layout%22%3A%22multiple%22%2C%22first-time-multijackpot%22%3A%221%22%7D; spkessid=vftr7e4v13m2glnd5enooq0nq3; device_view=full; locale=en'
 
@@ -79,9 +79,19 @@ class SportPesaScraper:
                 jackpot_id = data["jackpotPrizes"].get("jackpotId")
                 for prize_info in data["jackpotPrizes"]["prizes"]:
                     if prize_info.get("jackpotType") == self.TARGET_JACKPOT_TYPE:
+                        # Determine jackpot date from first event start time
+                        date_str = "unknown-date"
+                        if "eventsStartTimes" in data and data["eventsStartTimes"]:
+                            try:
+                                first_ts = data["eventsStartTimes"][0]
+                                # Convert ISO string to datetime, handling trailing Z
+                                event_dt = datetime.fromisoformat(first_ts.replace("Z", "+00:00"))
+                                date_str = event_dt.strftime("%d-%m-%y")
+                            except Exception:
+                                pass
                         return {
                             "jackpot_id": jackpot_id,
-                            "name": f"Mega Jackpot Pro {self.TARGET_MATCH_COUNT}",
+                            "name": f"Mega-Jackpot-{date_str}",
                             "current_amount": float(prize_info.get("prize", 0.0)),
                             "total_matches": self.TARGET_MATCH_COUNT,
                         }
