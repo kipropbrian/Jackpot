@@ -35,8 +35,8 @@ class CombinationGenerator:
             unique_combos.add(combo)
             combos_to_insert.append({
                 "simulation_id": self.simulation_id,
-                "jackpot_id": self.jackpot_id,
-                "combination": list(combo)
+                "predictions": list(combo),
+                "combination_number": len(unique_combos) + 1
             })
             if len(combos_to_insert) >= self.batch_size:
                 self._insert_combinations(combos_to_insert)
@@ -56,6 +56,10 @@ class CombinationGenerator:
         supabase.table("bet_combinations").insert(combos).execute()
 
     def _update_progress(self, inserted: int, complete: bool = False):
+        # Count total inserted combinations for this simulation
+        response = supabase.table("bet_combinations").select("id", count='exact').eq("simulation_id", self.simulation_id).execute()
+        total_inserted = response.count if hasattr(response, 'count') else None
+        print(f"[CombinationGenerator] Inserted so far: {total_inserted}")
         # Update simulation progress in the database
         progress = int(inserted / self.total_combinations * 100)
         status = "completed" if complete else "generating"

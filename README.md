@@ -60,3 +60,6 @@ This project is being developed in phases as outlined in the tasks.md file:
 6. Results Analysis
 7. Education Content
 8. UI Polish & Optimization
+
+
+## Backend Development
