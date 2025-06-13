@@ -1,32 +1,63 @@
--- Simulations table to store user simulation data
-CREATE TABLE public.simulations (
+-- This schema file mirrors the production Supabase database.
+-- Generated from supabase_scripts.txt to keep local migrations in sync.
+
+-- Create profiles table that extends Supabase auth.users
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID REFERENCES auth.users ON DELETE CASCADE,
+    email TEXT,
+    full_name TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (id)
+);
+
+-- Enable RLS and policies for profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "Users can read their own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY IF NOT EXISTS "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+-- Function + trigger to create profile after signup
+CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name)
+  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER IF NOT EXISTS on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ---------------------------------------------------------------------
+-- Simulations core tables
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.simulations (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    jackpot_id UUID REFERENCES public.jackpots(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     total_combinations INTEGER NOT NULL,
     cost_per_bet DECIMAL(10,2) NOT NULL,
     total_cost DECIMAL(15,2) NOT NULL,
-    status TEXT DEFAULT 'pending', -- pending, running, completed, failed
-    progress INTEGER DEFAULT 0, -- 0-100
+    status TEXT DEFAULT 'pending',
+    progress INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     completed_at TIMESTAMP WITH TIME ZONE,
-    results JSONB -- Final results summary
+    results JSONB
 );
 
--- Generated bet combinations
-CREATE TABLE public.bet_combinations (
+CREATE TABLE IF NOT EXISTS public.bet_combinations (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     simulation_id UUID REFERENCES public.simulations(id) ON DELETE CASCADE,
     combination_number INTEGER NOT NULL,
-    predictions JSONB NOT NULL, -- Array of predictions [1,X,2,1,X,...]
+    predictions JSONB NOT NULL,
     is_winner BOOLEAN DEFAULT false,
-    matches_count INTEGER DEFAULT 0, -- How many games matched
+    matches_count INTEGER DEFAULT 0,
     payout DECIMAL(15,2) DEFAULT 0,
-    batch_number INTEGER -- For processing in batches
+    batch_number INTEGER
 );
 
--- Simulation results summary
-CREATE TABLE public.simulation_results (
+CREATE TABLE IF NOT EXISTS public.simulation_results (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     simulation_id UUID REFERENCES public.simulations(id) ON DELETE CASCADE,
     total_winning_combinations INTEGER DEFAULT 0,
@@ -34,81 +65,58 @@ CREATE TABLE public.simulation_results (
     net_loss DECIMAL(15,2),
     best_match_count INTEGER DEFAULT 0,
     winning_percentage DECIMAL(5,4) DEFAULT 0,
-    analysis JSONB, -- Detailed breakdown
+    analysis JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable Row Level Security on simulations table
+-- RLS & policies for simulations tables
 ALTER TABLE public.simulations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "Users can read their own simulations" ON public.simulations FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY IF NOT EXISTS "Users can insert their own simulations" ON public.simulations FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY IF NOT EXISTS "Users can update their own simulations" ON public.simulations FOR UPDATE USING (auth.uid() = user_id);
 
--- Create policy to allow users to read their own simulations
-CREATE POLICY "Users can read their own simulations" 
-ON public.simulations 
-FOR SELECT 
-USING (auth.uid() = user_id);
-
--- Create policy to allow users to insert their own simulations
-CREATE POLICY "Users can insert their own simulations" 
-ON public.simulations 
-FOR INSERT 
-WITH CHECK (auth.uid() = user_id);
-
--- Create policy to allow users to update their own simulations
-CREATE POLICY "Users can update their own simulations" 
-ON public.simulations 
-FOR UPDATE 
-USING (auth.uid() = user_id);
-
--- Enable Row Level Security on bet_combinations table
 ALTER TABLE public.bet_combinations ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "Users can read their own bet combinations" ON public.bet_combinations FOR SELECT USING (EXISTS (SELECT 1 FROM public.simulations WHERE simulations.id = bet_combinations.simulation_id AND simulations.user_id = auth.uid()));
+CREATE POLICY IF NOT EXISTS "Users can insert bet combinations for their simulations" ON public.bet_combinations FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.simulations WHERE simulations.id = bet_combinations.simulation_id AND simulations.user_id = auth.uid()));
 
--- Create policy to allow users to read their own bet combinations
-CREATE POLICY "Users can read their own bet combinations" 
-ON public.bet_combinations 
-FOR SELECT 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.simulations 
-        WHERE simulations.id = bet_combinations.simulation_id 
-        AND simulations.user_id = auth.uid()
-    )
-);
-
--- Create policy to allow users to insert bet combinations for their simulations
-CREATE POLICY "Users can insert bet combinations for their simulations" 
-ON public.bet_combinations 
-FOR INSERT 
-WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM public.simulations 
-        WHERE simulations.id = bet_combinations.simulation_id 
-        AND simulations.user_id = auth.uid()
-    )
-);
-
--- Enable Row Level Security on simulation_results table
 ALTER TABLE public.simulation_results ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "Users can read their own simulation results" ON public.simulation_results FOR SELECT USING (EXISTS (SELECT 1 FROM public.simulations WHERE simulations.id = simulation_results.simulation_id AND simulations.user_id = auth.uid()));
+CREATE POLICY IF NOT EXISTS "Users can insert simulation results for their simulations" ON public.simulation_results FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM public.simulations WHERE simulations.id = simulation_results.simulation_id AND simulations.user_id = auth.uid()));
 
--- Create policy to allow users to read their own simulation results
-CREATE POLICY "Users can read their own simulation results" 
-ON public.simulation_results 
-FOR SELECT 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.simulations 
-        WHERE simulations.id = simulation_results.simulation_id 
-        AND simulations.user_id = auth.uid()
-    )
+-- ---------------------------------------------------------------------
+-- Jackpot & games tables (scraper)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.jackpots (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    jackpot_api_id TEXT UNIQUE,
+    name TEXT NOT NULL,
+    current_amount DECIMAL(15,2) NOT NULL,
+    total_matches INTEGER NOT NULL,
+    scraped_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create policy to allow users to insert simulation results for their simulations
-CREATE POLICY "Users can insert simulation results for their simulations" 
-ON public.simulation_results 
-FOR INSERT 
-WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM public.simulations 
-        WHERE simulations.id = simulation_results.simulation_id 
-        AND simulations.user_id = auth.uid()
-    )
+CREATE TABLE IF NOT EXISTS public.games (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    jackpot_id UUID REFERENCES public.jackpots(id) ON DELETE CASCADE,
+    game_api_id TEXT UNIQUE,
+    kick_off_time TIMESTAMP WITH TIME ZONE,
+    home_team TEXT,
+    away_team TEXT,
+    tournament TEXT,
+    country TEXT,
+    odds_home DECIMAL(10,2),
+    odds_draw DECIMAL(10,2),
+    odds_away DECIMAL(10,2),
+    score_home INTEGER,
+    score_away INTEGER,
+    game_order INTEGER,
+    betting_status TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- RLS & policies for jackpots/games (service role unrestricted)
+ALTER TABLE public.jackpots ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
+CREATE POLICY IF NOT EXISTS "Service role has full access to jackpots" ON public.jackpots FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY IF NOT EXISTS "Service role has full access to games" ON public.games FOR ALL USING (true) WITH CHECK (true);
