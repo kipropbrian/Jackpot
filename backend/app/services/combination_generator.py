@@ -1,7 +1,7 @@
 import random
 from typing import List, Dict, Any
 from app.config.database import supabase
-from decimal import Decimal
+from app.services.results_analyzer import ResultsAnalyzer
 
 class CombinationGenerator:
     """
@@ -63,7 +63,16 @@ class CombinationGenerator:
         # Update simulation progress in the database
         progress = int(inserted / self.total_combinations * 100)
         status = "completed" if complete else "generating"
+        # Update simulation row
         supabase.table("simulations").update({
             "progress": progress,
             "status": status
         }).eq("id", self.simulation_id).execute()
+
+        # If we've just marked simulation completed, and the jackpot is also completed, run results analysis inline.
+        if complete:
+            jp_resp = supabase.table("jackpots").select("status").eq("id", self.jackpot_id).single().execute()
+            if jp_resp.data and jp_resp.data.get("status") == "completed":
+                summary = ResultsAnalyzer(self.simulation_id, self.jackpot_id).analyze()
+                # Upsert so reruns are safe
+                supabase.table("simulation_results").upsert(summary, on_conflict="simulation_id").execute()

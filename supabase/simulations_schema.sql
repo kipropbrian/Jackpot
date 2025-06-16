@@ -66,7 +66,8 @@ CREATE TABLE IF NOT EXISTS public.simulation_results (
     best_match_count INTEGER DEFAULT 0,
     winning_percentage DECIMAL(5,4) DEFAULT 0,
     analysis JSONB,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(simulation_id)
 );
 
 -- RLS & policies for simulations tables
@@ -92,7 +93,9 @@ CREATE TABLE IF NOT EXISTS public.jackpots (
     name TEXT NOT NULL,
     current_amount DECIMAL(15,2) NOT NULL,
     total_matches INTEGER NOT NULL,
-    scraped_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    scraped_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    status TEXT DEFAULT 'open',
+    completed_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE TABLE IF NOT EXISTS public.games (
@@ -114,6 +117,37 @@ CREATE TABLE IF NOT EXISTS public.games (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- ---------------------------------------------------------------------
+-- Jackpot completion trigger
+-- ---------------------------------------------------------------------
+-- Function sets status="completed" and completed_at when all games have scores
+CREATE OR REPLACE FUNCTION public.mark_jackpot_complete() RETURNS TRIGGER AS $$
+DECLARE
+  unfinished INTEGER;
+BEGIN
+  -- count remaining games without scores
+  SELECT COUNT(1)
+    INTO unfinished
+    FROM public.games
+   WHERE jackpot_id = NEW.jackpot_id
+     AND (score_home IS NULL OR score_away IS NULL);
+  IF unfinished = 0 THEN
+    UPDATE public.jackpots
+       SET status = 'completed',
+           completed_at = NOW()
+     WHERE id = NEW.jackpot_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger fires after each game update
+CREATE TRIGGER trg_game_mark_complete
+AFTER UPDATE OF score_home, score_away ON public.games
+FOR EACH ROW
+WHEN (OLD.score_home IS DISTINCT FROM NEW.score_home OR OLD.score_away IS DISTINCT FROM NEW.score_away)
+EXECUTE FUNCTION public.mark_jackpot_complete();
 
 -- RLS & policies for jackpots/games (service role unrestricted)
 ALTER TABLE public.jackpots ENABLE ROW LEVEL SECURITY;

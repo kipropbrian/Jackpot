@@ -1,6 +1,15 @@
 from typing import List, Dict, Any
 
+import logging
+
 from app.config.database import supabase
+
+# Configure a module-level logger. In FastAPI Uvicorn apps, the root logger is
+# usually configured already; the fallback basicConfig ensures logs still show
+# up when run as a script.
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logging.basicConfig(level=logging.INFO)
 
 
 class ResultsAnalyzer:
@@ -29,19 +38,77 @@ class ResultsAnalyzer:
         # comparison during analysis.
         self.actual_results: List[str] = [self._determine_result(g) for g in self.games]
         self.num_games = len(self.actual_results)
+        
+        # Get simulation details
+        response = supabase.table("simulations").select("total_cost").eq("id", simulation_id).single().execute()
+        if not response.data:
+            raise ValueError(f"Simulation {simulation_id} not found")
+        self.total_cost = response.data["total_cost"]
+
+        self._update_status("analyzing")
 
     # ---------------------------------------------------------------------
     # Public helpers
     # ---------------------------------------------------------------------
     def analyze(self) -> Dict[str, Any]:
-        """Run the full analysis and return a results summary."""
-        total_combinations = 0
-        winning_combinations = 0
-        # Fetch combinations in manageable chunks to avoid exceeding the
-        # Supabase 1 MB payload limit.  The default chunk size of 1000 is
-        # a good balance between latency and memory usage.
+        """Analyze bet combinations against actual game results."""
+        self.games = self._fetch_games_with_results()
+        if not self.games:
+            logger.warning("[ResultsAnalyzer] No games with results found for jackpot %s", self.jackpot_id)
+            return {
+                "simulation_id": self.simulation_id,
+                "total_winning_combinations": 0,
+                "total_payout": 0,
+                "net_loss": float(self.total_cost),
+                "best_match_count": 0,
+                "winning_percentage": 0,
+                "analysis": {
+                    "error": "No games with results found",
+                    "total_combinations": 0,
+                    "winning_combinations": 0,
+                    "winning_percentage": 0
+                }
+            }
+
+        self.actual_results = [self._determine_result(g) for g in self.games]
+        self.num_games = len(self.actual_results)
+        
+        # Get simulation details
+        response = supabase.table("simulations").select("total_cost").eq("id", self.simulation_id).single().execute()
+        if not response.data:
+            raise ValueError(f"Simulation {self.simulation_id} not found")
+        self.total_cost = response.data["total_cost"]
+
+        self._update_status("analyzing")
+        
+        # Get total expected combinations
+        count_response = supabase.table("bet_combinations").select("id", count='exact').eq("simulation_id", self.simulation_id).execute()
+        total_expected = count_response.count if hasattr(count_response, 'count') else 0
+        
+        if total_expected == 0:
+            logger.warning("[ResultsAnalyzer] No bet combinations found for simulation %s", self.simulation_id)
+            return {
+                "simulation_id": self.simulation_id,
+                "total_winning_combinations": 0,
+                "total_payout": 0,
+                "net_loss": float(self.total_cost),
+                "best_match_count": 0,
+                "winning_percentage": 0,
+                "analysis": {
+                    "error": "No bet combinations found",
+                    "total_combinations": 0,
+                    "winning_combinations": 0,
+                    "winning_percentage": 0
+                }
+            }
+
+        # Process combinations in chunks
         CHUNK_SIZE = 1000
         next_offset = 0
+        processed = 0
+        total_combinations = 0
+        winning_combinations = 0
+        
         while True:
             response = (
                 supabase.table("bet_combinations")
@@ -53,24 +120,61 @@ class ResultsAnalyzer:
             chunk = response.data or []
             if not chunk:
                 break
+                
             for row in chunk:
                 total_combinations += 1
                 preds: List[str] = row["predictions"]
-                # Safety: make sure we always compare equal-length lists.
                 if len(preds) != self.num_games:
-                    continue  # Skip malformed combination.
+                    continue
                 if preds == self.actual_results:
                     winning_combinations += 1
-            # Prepare next batch.
+                    
+            processed += len(chunk)
+            progress = int((processed / total_expected) * 100) if total_expected else 0
+            self._update_status("analyzing", progress)
+            
+            logger.info(
+                "[ResultsAnalyzer] Progress: %d%% - Processed %d/%d combinations, %d winners",
+                progress, processed, total_expected, winning_combinations
+            )
             next_offset += CHUNK_SIZE
-        return {
+
+        summary = {
             "simulation_id": self.simulation_id,
             "total_winning_combinations": winning_combinations,
-            "total_payout": 0,
-            "net_loss": 0,
-            "winning_percentage": round(winning_combinations / total_combinations, 4) if total_combinations else 0,
-            "analysis": None,
+            "total_payout": 0,  # TODO: Calculate actual payout
+            "net_loss": float(self.total_cost),  # Since no winners, total cost is the loss
+            "best_match_count": self.num_games if winning_combinations > 0 else 0,
+            "winning_percentage": round(winning_combinations / total_combinations * 100, 4) if total_combinations else 0,
+            "analysis": {
+                "total_combinations": total_combinations,
+                "winning_combinations": winning_combinations,
+                "winning_percentage": round(winning_combinations / total_combinations * 100, 4) if total_combinations else 0,
+                "actual_results": self.actual_results
+            }
         }
+        
+        logger.info(
+            "[ResultsAnalyzer] Completed analysis – checked %d combinations, winners=%d (%.4f%%)",
+            total_combinations,
+            winning_combinations,
+            (winning_combinations / total_combinations * 100) if total_combinations else 0,
+        )
+        
+        try:
+            # Update final status
+            self._update_status("completed", 100)
+            
+            # Store results
+            response = supabase.table("simulation_results").upsert(summary, on_conflict="simulation_id").execute()
+            if not response.data:
+                logger.error("[ResultsAnalyzer] Failed to store results for simulation %s", self.simulation_id)
+            
+            return summary
+        except Exception as e:
+            logger.error("[ResultsAnalyzer] Error storing results: %s", str(e))
+            # Still return the summary even if storage fails
+            return summary
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -91,6 +195,13 @@ class ResultsAnalyzer:
         games = response.data or []
         # Keep only rows where scores are available.
         return [g for g in games if g.get("score_home") is not None and g.get("score_away") is not None]
+
+    def _update_status(self, status: str, progress: int = None) -> None:
+        """Update simulation status and progress in the database."""
+        update_data = {"status": status}
+        if progress is not None:
+            update_data["progress"] = progress
+        supabase.table("simulations").update(update_data).eq("id", self.simulation_id).execute()
 
     # ------------------------------------------------------------------
     # Result helper

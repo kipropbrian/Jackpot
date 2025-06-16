@@ -11,6 +11,15 @@ from app.config.database import supabase
 from app.api.deps import get_current_user
 from decimal import Decimal
 from app.services.combination_generator import CombinationGenerator
+from app.services.results_analyzer import ResultsAnalyzer
+
+
+def run_results_analysis(sim_id: str, jackpot_id: str):
+    """Runs ResultsAnalyzer and upserts summary into simulation_results table."""
+    summary = ResultsAnalyzer(simulation_id=sim_id, jackpot_id=jackpot_id).analyze()
+    # Upsert ensures idempotency if analysis already exists
+    supabase.table("simulation_results").upsert(summary, on_conflict="simulation_id").execute()
+
 
 router = APIRouter()
 
@@ -99,15 +108,24 @@ async def get_simulation(
     Get a specific simulation by ID.
     """
     try:
-        response = supabase.table("simulations").select("*").eq("id", str(simulation_id)).eq("user_id", current_user["id"]).execute()
+        # Get simulation data
+        sim_response = supabase.table("simulations").select("*").eq("id", str(simulation_id)).eq("user_id", current_user["id"]).execute()
         
-        if not response.data or len(response.data) == 0:
+        if not sim_response.data or len(sim_response.data) == 0:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Simulation not found"
             )
         
-        return response.data[0]
+        simulation = sim_response.data[0]
+        
+        # Get results data if simulation is completed
+        if simulation["status"] == "completed":
+            results_response = supabase.table("simulation_results").select("*").eq("simulation_id", str(simulation_id)).execute()
+            if results_response.data and len(results_response.data) > 0:
+                simulation["results"] = results_response.data[0]
+        
+        return simulation
     except HTTPException:
         raise
     except Exception as e:
@@ -119,6 +137,7 @@ async def get_simulation(
 @router.patch("/{simulation_id}", response_model=SimulationResponse)
 async def update_simulation(
     simulation_update: SimulationUpdate,
+    background_tasks: BackgroundTasks,
     simulation_id: UUID = Path(...),
     current_user: dict = Depends(get_current_user)
 ):
@@ -147,7 +166,13 @@ async def update_simulation(
                 detail="Failed to update simulation"
             )
         
-        return response.data[0]
+        updated_sim = response.data[0]
+        # Trigger results analysis only when simulation is completed and its jackpot is also completed
+        if update_data.get("status") == "completed":
+            jp_status_resp = supabase.table("jackpots").select("status").eq("id", updated_sim["jackpot_id"]).single().execute()
+            if jp_status_resp.data and jp_status_resp.data.get("status") == "completed":
+                background_tasks.add_task(run_results_analysis, str(updated_sim["id"]), str(updated_sim["jackpot_id"]))
+        return updated_sim
     except HTTPException:
         raise
     except Exception as e:
