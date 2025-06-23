@@ -13,7 +13,8 @@ if not logger.handlers:
 
 
 class ResultsAnalyzer:
-    """Analyze bet combinations for a simulation against actual game results.
+    """
+    Analyze bet combinations for a simulation against actual game results.
 
     The analyzer performs the following steps:
     1. Fetch the ordered list of games for the provided ``jackpot_id``.
@@ -45,6 +46,11 @@ class ResultsAnalyzer:
             raise ValueError(f"Simulation {simulation_id} not found")
         self.total_cost = response.data["total_cost"]
 
+        # Convert actual results to tuple for faster comparisons
+        self.actual_results_tuple = tuple(self._determine_result(g) for g in self.games)
+        # Keep track of best match count
+        self.best_match_count = 0
+
         self._update_status("analyzing")
 
     # ---------------------------------------------------------------------
@@ -52,7 +58,6 @@ class ResultsAnalyzer:
     # ---------------------------------------------------------------------
     def analyze(self) -> Dict[str, Any]:
         """Analyze bet combinations against actual game results."""
-        self.games = self._fetch_games_with_results()
         if not self.games:
             logger.warning("[ResultsAnalyzer] No games with results found for jackpot %s", self.jackpot_id)
             return {
@@ -69,17 +74,6 @@ class ResultsAnalyzer:
                     "winning_percentage": 0
                 }
             }
-
-        self.actual_results = [self._determine_result(g) for g in self.games]
-        self.num_games = len(self.actual_results)
-        
-        # Get simulation details
-        response = supabase.table("simulations").select("total_cost").eq("id", self.simulation_id).single().execute()
-        if not response.data:
-            raise ValueError(f"Simulation {self.simulation_id} not found")
-        self.total_cost = response.data["total_cost"]
-
-        self._update_status("analyzing")
         
         # Get total expected combinations
         count_response = supabase.table("bet_combinations").select("id", count='exact').eq("simulation_id", self.simulation_id).execute()
@@ -125,8 +119,16 @@ class ResultsAnalyzer:
                 total_combinations += 1
                 preds: List[str] = row["predictions"]
                 if len(preds) != self.num_games:
+                    logger.warning(
+                        f"Skipping combination {row['id']} - invalid prediction count: {len(preds)}, expected: {self.num_games}"
+                    )
                     continue
-                if preds == self.actual_results:
+                
+                # Convert predictions to tuple for faster comparison
+                matches = self._count_matches(preds)
+                self.best_match_count = max(self.best_match_count, matches)
+                
+                if matches == self.num_games:  # All predictions match
                     winning_combinations += 1
                     
             processed += len(chunk)
@@ -144,7 +146,7 @@ class ResultsAnalyzer:
             "total_winning_combinations": winning_combinations,
             "total_payout": 0,  # TODO: Calculate actual payout
             "net_loss": float(self.total_cost),  # Since no winners, total cost is the loss
-            "best_match_count": self.num_games if winning_combinations > 0 else 0,
+            "best_match_count": self.best_match_count,
             "winning_percentage": round(winning_combinations / total_combinations * 100, 4) if total_combinations else 0,
             "analysis": {
                 "total_combinations": total_combinations,
@@ -216,3 +218,7 @@ class ResultsAnalyzer:
         if home < away:
             return "2"
         return "X"
+
+    def _count_matches(self, predictions: List[str]) -> int:
+        """Count how many predictions match the actual results."""
+        return sum(p == a for p, a in zip(predictions, self.actual_results_tuple))

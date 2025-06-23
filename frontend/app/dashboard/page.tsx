@@ -71,7 +71,7 @@ export default function DashboardPage() {
   }, [simulations]);
 
   if (isSimulationsLoading) {
-    return <div>Loading...</div>;
+    return <div className="text-gray-900 text-sm">Loading...</div>;
   }
 
   return (

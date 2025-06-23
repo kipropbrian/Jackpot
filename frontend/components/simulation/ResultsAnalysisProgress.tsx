@@ -19,7 +19,7 @@ export default function ResultsAnalysisProgress({
     const updateProgress = async () => {
       try {
         const updatedSimulation = await getSimulation(simulation.id);
-        const currentProgress = updatedSimulation.analysis_progress || 0;
+        const currentProgress = updatedSimulation.progress || 0;
         setProgress(currentProgress);
         setTotalCombinations(updatedSimulation.total_combinations || 0);
       } catch (error) {
@@ -48,9 +48,7 @@ export default function ResultsAnalysisProgress({
     switch (simulation.status) {
       case "pending":
         return "Waiting to start analysis...";
-      case "generating":
-        return "Waiting for combinations to be generated...";
-      case "analyzing":
+      case "running":
         return `Analyzing ${totalCombinations.toLocaleString()} combinations...`;
       case "completed":
         return "Analysis completed";
