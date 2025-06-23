@@ -1,7 +1,5 @@
 from typing import List, Dict, Any
-
 import logging
-
 from app.config.database import supabase
 
 # Configure a module-level logger. In FastAPI Uvicorn apps, the root logger is
@@ -28,6 +26,7 @@ class ResultsAnalyzer:
     """
 
     def __init__(self, simulation_id: str, jackpot_id: str) -> None:
+        logger.critical(f"Initializing ResultsAnalyzer for simulation {simulation_id} and jackpot {jackpot_id}")
         self.simulation_id = simulation_id
         self.jackpot_id = jackpot_id
         self.games: List[Dict[str, Any]] = self._fetch_games_with_results()
@@ -53,117 +52,91 @@ class ResultsAnalyzer:
 
         self._update_status("analyzing")
 
-    # ---------------------------------------------------------------------
-    # Public helpers
-    # ---------------------------------------------------------------------
     def analyze(self) -> Dict[str, Any]:
         """Analyze bet combinations against actual game results."""
-        if not self.games:
-            logger.warning("[ResultsAnalyzer] No games with results found for jackpot %s", self.jackpot_id)
-            return {
-                "simulation_id": self.simulation_id,
-                "total_winning_combinations": 0,
-                "total_payout": 0,
-                "net_loss": float(self.total_cost),
-                "best_match_count": 0,
-                "winning_percentage": 0,
-                "analysis": {
-                    "error": "No games with results found",
-                    "total_combinations": 0,
-                    "winning_combinations": 0,
-                    "winning_percentage": 0
-                }
-            }
-        
-        # Get total expected combinations
-        count_response = supabase.table("bet_combinations").select("id", count='exact').eq("simulation_id", self.simulation_id).execute()
-        total_expected = count_response.count if hasattr(count_response, 'count') else 0
-        
-        if total_expected == 0:
-            logger.warning("[ResultsAnalyzer] No bet combinations found for simulation %s", self.simulation_id)
-            return {
-                "simulation_id": self.simulation_id,
-                "total_winning_combinations": 0,
-                "total_payout": 0,
-                "net_loss": float(self.total_cost),
-                "best_match_count": 0,
-                "winning_percentage": 0,
-                "analysis": {
-                    "error": "No bet combinations found",
-                    "total_combinations": 0,
-                    "winning_combinations": 0,
-                    "winning_percentage": 0
-                }
-            }
+        try:
+            # Set initial status
+            self._update_status("analyzing")
+            
+            if not self.games:
+                logger.warning("[ResultsAnalyzer] No games with results found for jackpot %s", self.jackpot_id)
+                return self._create_empty_result("No games with results found")
+            
+            # Get total expected combinations
+            count_response = supabase.table("bet_combinations").select("id", count='exact').eq("simulation_id", self.simulation_id).execute()
+            total_expected = count_response.count if hasattr(count_response, 'count') else 0
+            
+            if total_expected == 0:
+                logger.warning("[ResultsAnalyzer] No bet combinations found for simulation %s", self.simulation_id)
+                return self._create_empty_result("No bet combinations found")
 
-        # Process combinations in chunks
-        CHUNK_SIZE = 1000
-        next_offset = 0
-        processed = 0
-        total_combinations = 0
-        winning_combinations = 0
-        
-        while True:
-            response = (
-                supabase.table("bet_combinations")
-                .select("id,predictions")
-                .eq("simulation_id", self.simulation_id)
-                .range(next_offset, next_offset + CHUNK_SIZE - 1)
-                .execute()
-            )
-            chunk = response.data or []
-            if not chunk:
-                break
-                
-            for row in chunk:
-                total_combinations += 1
-                preds: List[str] = row["predictions"]
-                if len(preds) != self.num_games:
-                    logger.warning(
-                        f"Skipping combination {row['id']} - invalid prediction count: {len(preds)}, expected: {self.num_games}"
-                    )
-                    continue
-                
-                # Convert predictions to tuple for faster comparison
-                matches = self._count_matches(preds)
-                self.best_match_count = max(self.best_match_count, matches)
-                
-                if matches == self.num_games:  # All predictions match
-                    winning_combinations += 1
+            # Process combinations in chunks
+            CHUNK_SIZE = 1000
+            next_offset = 0
+            processed = 0
+            total_combinations = 0
+            winning_combinations = 0
+            
+            while True:
+                response = (
+                    supabase.table("bet_combinations")
+                    .select("id,predictions")
+                    .eq("simulation_id", self.simulation_id)
+                    .range(next_offset, next_offset + CHUNK_SIZE - 1)
+                    .execute()
+                )
+                chunk = response.data or []
+                if not chunk:
+                    break
                     
-            processed += len(chunk)
-            progress = int((processed / total_expected) * 100) if total_expected else 0
-            self._update_status("analyzing", progress)
+                for row in chunk:
+                    total_combinations += 1
+                    preds: List[str] = row["predictions"]
+                    if len(preds) != self.num_games:
+                        logger.warning(
+                            f"Skipping combination {row['id']} - invalid prediction count: {len(preds)}, expected: {self.num_games}"
+                        )
+                        continue
+                    
+                    # Convert predictions to tuple for faster comparison
+                    matches = self._count_matches(preds)
+                    self.best_match_count = max(self.best_match_count, matches)
+                    
+                    if matches == self.num_games:  # All predictions match
+                        winning_combinations += 1
+                        
+                processed += len(chunk)
+                progress = int((processed / total_expected) * 100) if total_expected else 0
+                self._update_status("analyzing", progress)
+                
+                logger.info(
+                    "[ResultsAnalyzer] Progress: %d%% - Processed %d/%d combinations, %d winners",
+                    progress, processed, total_expected, winning_combinations
+                )
+                next_offset += CHUNK_SIZE
+
+            summary = {
+                "simulation_id": self.simulation_id,
+                "total_winning_combinations": winning_combinations,
+                "total_payout": 0,  # TODO: Calculate actual payout
+                "net_loss": float(self.total_cost),  # Since no winners, total cost is the loss
+                "best_match_count": self.best_match_count,
+                "winning_percentage": round(winning_combinations / total_combinations * 100, 4) if total_combinations else 0,
+                "analysis": {
+                    "total_combinations": total_combinations,
+                    "winning_combinations": winning_combinations,
+                    "winning_percentage": round(winning_combinations / total_combinations * 100, 4) if total_combinations else 0,
+                    "actual_results": self.actual_results
+                }
+            }
             
             logger.info(
-                "[ResultsAnalyzer] Progress: %d%% - Processed %d/%d combinations, %d winners",
-                progress, processed, total_expected, winning_combinations
+                "[ResultsAnalyzer] Completed analysis – checked %d combinations, winners=%d (%.4f%%)",
+                total_combinations,
+                winning_combinations,
+                (winning_combinations / total_combinations * 100) if total_combinations else 0,
             )
-            next_offset += CHUNK_SIZE
-
-        summary = {
-            "simulation_id": self.simulation_id,
-            "total_winning_combinations": winning_combinations,
-            "total_payout": 0,  # TODO: Calculate actual payout
-            "net_loss": float(self.total_cost),  # Since no winners, total cost is the loss
-            "best_match_count": self.best_match_count,
-            "winning_percentage": round(winning_combinations / total_combinations * 100, 4) if total_combinations else 0,
-            "analysis": {
-                "total_combinations": total_combinations,
-                "winning_combinations": winning_combinations,
-                "winning_percentage": round(winning_combinations / total_combinations * 100, 4) if total_combinations else 0,
-                "actual_results": self.actual_results
-            }
-        }
-        
-        logger.info(
-            "[ResultsAnalyzer] Completed analysis – checked %d combinations, winners=%d (%.4f%%)",
-            total_combinations,
-            winning_combinations,
-            (winning_combinations / total_combinations * 100) if total_combinations else 0,
-        )
-        
-        try:
+            
             # Update final status
             self._update_status("completed", 100)
             
@@ -173,14 +146,32 @@ class ResultsAnalyzer:
                 logger.error("[ResultsAnalyzer] Failed to store results for simulation %s", self.simulation_id)
             
             return summary
+            
         except Exception as e:
-            logger.error("[ResultsAnalyzer] Error storing results: %s", str(e))
-            # Still return the summary even if storage fails
-            return summary
+            logger.error("[ResultsAnalyzer] Error during analysis: %s", str(e))
+            self._update_status("failed")
+            raise
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
+    def _create_empty_result(self, error_message: str) -> Dict[str, Any]:
+        """Create an empty result with an error message."""
+        return {
+            "simulation_id": self.simulation_id,
+            "total_winning_combinations": 0,
+            "total_payout": 0,
+            "net_loss": float(self.total_cost),
+            "best_match_count": 0,
+            "winning_percentage": 0,
+            "analysis": {
+                "error": error_message,
+                "total_combinations": 0,
+                "winning_combinations": 0,
+                "winning_percentage": 0
+            }
+        }
+
+    # ---------------------------------------------------------------------
+    # Public helpers
+    # ---------------------------------------------------------------------
     def _fetch_games_with_results(self) -> List[Dict[str, Any]]:
         """Retrieve finished games (i.e., with recorded scores) for the jackpot.
 
@@ -203,6 +194,7 @@ class ResultsAnalyzer:
         update_data = {"status": status}
         if progress is not None:
             update_data["progress"] = progress
+        # Update simulation status and progress through Supabase
         supabase.table("simulations").update(update_data).eq("id", self.simulation_id).execute()
 
     # ------------------------------------------------------------------

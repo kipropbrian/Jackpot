@@ -9,7 +9,7 @@ export interface Simulation {
   total_combinations: number;
   cost_per_bet: number;
   total_cost: number;
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   progress: number;
   created_at: string;
   completed_at?: string;
@@ -24,7 +24,7 @@ export interface SimulationCreate {
 
 export interface SimulationUpdate {
   name?: string;
-  status?: 'pending' | 'running' | 'completed' | 'failed';
+  status?: "pending" | "running" | "completed" | "failed";
   progress?: number;
   completed_at?: string;
   results?: Record<string, any>;
@@ -59,6 +59,7 @@ export interface Jackpot {
   current_amount: number;
   total_matches: number;
   scraped_at: string;
+  status: "open" | "completed";
   games: Game[];
 }
 

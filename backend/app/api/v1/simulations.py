@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status, BackgroundTasks
 from app.schemas.simulation import (
@@ -136,26 +136,19 @@ async def get_simulation(
 
 @router.patch("/{simulation_id}", response_model=SimulationResponse)
 async def update_simulation(
-    simulation_update: SimulationUpdate,
+    simulation_id: UUID,
+    update_data: Dict[str, Any],
     background_tasks: BackgroundTasks,
-    simulation_id: UUID = Path(...),
-    current_user: dict = Depends(get_current_user)
+    current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """
     Update a specific simulation by ID.
     """
     try:
-        # Check if simulation exists and belongs to the user
-        check_response = supabase.table("simulations").select("*").eq("id", str(simulation_id)).eq("user_id", current_user["id"]).execute()
-        
-        if not check_response.data or len(check_response.data) == 0:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Simulation not found"
-            )
-        
-        # Prepare update data (exclude None values)
-        update_data = {k: v for k, v in simulation_update.model_dump().items() if v is not None}
+        # Verify simulation exists and belongs to user
+        sim_response = supabase.table("simulations").select("*").eq("id", str(simulation_id)).eq("user_id", current_user["id"]).single().execute()
+        if not sim_response.data:
+            raise HTTPException(status_code=404, detail="Simulation not found")
         
         # Update simulation
         response = supabase.table("simulations").update(update_data).eq("id", str(simulation_id)).eq("user_id", current_user["id"]).execute()
@@ -167,11 +160,14 @@ async def update_simulation(
             )
         
         updated_sim = response.data[0]
-        # Trigger results analysis only when simulation is completed and its jackpot is also completed
+        
+        # If simulation is completed, check if jackpot is also completed
         if update_data.get("status") == "completed":
-            jp_status_resp = supabase.table("jackpots").select("status").eq("id", updated_sim["jackpot_id"]).single().execute()
-            if jp_status_resp.data and jp_status_resp.data.get("status") == "completed":
+            jp_response = supabase.table("jackpots").select("status").eq("id", updated_sim["jackpot_id"]).single().execute()
+            if jp_response.data and jp_response.data.get("status") == "completed":
+                # Add analysis task to background tasks
                 background_tasks.add_task(run_results_analysis, str(updated_sim["id"]), str(updated_sim["jackpot_id"]))
+        
         return updated_sim
     except HTTPException:
         raise

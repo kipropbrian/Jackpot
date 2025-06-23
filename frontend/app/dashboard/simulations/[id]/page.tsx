@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import SimulationProgressBar from "@/components/simulation/SimulationProgressBar";
 import ResultsAnalysisProgress from "@/components/simulation/ResultsAnalysisProgress";
 import SimulationResults from "@/components/simulation/SimulationResults";
@@ -15,64 +15,70 @@ export default function SimulationDetailsPage({
   params: { id: string };
 }) {
   const router = useRouter();
-  const {
-    getSimulation,
-    updateSimulation,
-    deleteSimulation,
-    isLoading,
-    error,
-  } = useSimulations({ autoFetch: false });
+  const { getSimulation, deleteSimulation, isLoading, error } = useSimulations({
+    autoFetch: false,
+  });
   const [simulation, setSimulation] = useState<Simulation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  // Progress polling
-  const [progress, setProgress] = useState<number | null>(null);
-  const [polling, setPolling] = useState(false);
+
+  const fetchSimulation = useCallback(async () => {
+    try {
+      const data = await getSimulation(params.id);
+      setSimulation(data);
+    } catch (error) {
+      console.error("Error fetching simulation:", error);
+    }
+  }, [params.id, getSimulation]);
 
   useEffect(() => {
-    const fetchSimulation = async () => {
-      try {
-        const data = await getSimulation(params.id);
-        setSimulation(data);
-      } catch (err) {
-        console.error("Error fetching simulation:", err);
-      }
-    };
-
     fetchSimulation();
-  }, [params.id, getSimulation]);
+  }, [fetchSimulation]);
 
   // Poll for progress if simulation is running
   useEffect(() => {
     if (!simulation) return;
 
-    // Only poll if not completed or failed
-    if (simulation.status === "completed" || simulation.status === "failed") {
-      setPolling(false);
-      setProgress(simulation.progress);
+    // Stop polling if:
+    // 1. Simulation is completed or failed
+    // 2. Results analysis is complete (results exist)
+    if (
+      simulation.status === "completed" ||
+      simulation.status === "failed" ||
+      (simulation.results && simulation.results.length > 0)
+    ) {
       return;
     }
-
-    setPolling(true);
-    setProgress(simulation.progress);
 
     const interval = setInterval(async () => {
       try {
         const updated = await getSimulation(params.id);
         setSimulation(updated);
-        setProgress(updated.progress);
 
-        // Stop polling if now completed or failed
-        if (updated.status === "completed" || updated.status === "failed") {
-          setPolling(false);
+        // Stop polling if:
+        // 1. Simulation is completed or failed
+        // 2. Results analysis is complete (results exist)
+        if (
+          updated.status === "completed" ||
+          updated.status === "failed" ||
+          (updated.results && updated.results.length > 0)
+        ) {
           clearInterval(interval);
         }
-      } catch (err) {
-        // Optionally handle error
+      } catch (error) {
+        console.error("Error polling simulation:", error);
       }
-    }, 5000); // Poll every 2 seconds
+    }, 5000); // Poll every 5 seconds
 
     return () => clearInterval(interval);
-  }, [simulation?.status, getSimulation, params.id]);
+  }, [simulation?.status, simulation?.results, getSimulation, params.id]);
+
+  const handleAnalysisComplete = useCallback(
+    async (updatedSimulation: Simulation) => {
+      // Refresh the simulation data to get the latest results
+      await fetchSimulation();
+    },
+    [fetchSimulation]
+  );
 
   const handleDelete = async () => {
     if (!simulation) return;
@@ -171,7 +177,7 @@ export default function SimulationDetailsPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with basic info */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
           <div>
@@ -181,18 +187,14 @@ export default function SimulationDetailsPage({
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
               Simulation Details
             </p>
-            {/* Progress Bars */}
-            <div className="mt-4 space-y-4">
+            {/* Simulation Progress Bar */}
+            <div className="mt-4">
               <SimulationProgressBar
                 simulationId={simulation.id}
                 initialProgress={simulation.progress}
                 status={simulation.status}
                 getSimulation={getSimulation}
                 loading={isLoading}
-              />
-              <ResultsAnalysisProgress
-                simulation={simulation}
-                getSimulation={getSimulation}
               />
             </div>
           </div>
@@ -230,19 +232,6 @@ export default function SimulationDetailsPage({
               <dt className="text-sm font-medium text-gray-500">Status</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                 {getStatusBadge(simulation.status)}
-                {simulation.status === "running" && (
-                  <div className="mt-2">
-                    <div className="bg-gray-200 rounded-full h-2.5 w-full">
-                      <div
-                        className="bg-blue-600 h-2.5 rounded-full"
-                        style={{ width: `${simulation.progress}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {simulation.progress}% complete
-                    </span>
-                  </div>
-                )}
               </dd>
             </div>
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -287,9 +276,24 @@ export default function SimulationDetailsPage({
         </div>
       </div>
 
-      {/* Simulation Results */}
-      {simulation.status === "completed" && (
-        <SimulationResults simulation={simulation} />
+      {/* Results Analysis Progress */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <div className="mt-4">
+            <ResultsAnalysisProgress
+              simulation={simulation}
+              getSimulation={getSimulation}
+              onAnalysisComplete={handleAnalysisComplete}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Results Section */}
+      {simulation.results && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <SimulationResults simulation={simulation} />
+        </div>
       )}
     </div>
   );
