@@ -19,6 +19,8 @@ export default function ResultsAnalysisProgress({
   const [jackpotStatus, setJackpotStatus] = useState<
     "open" | "completed" | null
   >(null);
+  const [error, setError] = useState<string | null>(null);
+  const [errorCount, setErrorCount] = useState(0);
   const { updateSimulation: triggerResultsAnalysis } = useSimulations({
     autoFetch: false,
   });
@@ -29,8 +31,12 @@ export default function ResultsAnalysisProgress({
       try {
         const jackpot = await JackpotService.getJackpot(simulation.jackpot_id);
         setJackpotStatus(jackpot.status as "open" | "completed");
+        setError(null);
+        setErrorCount(0);
       } catch (error) {
         console.error("Error fetching jackpot status:", error);
+        setError("Failed to fetch jackpot status");
+        setErrorCount((prev) => prev + 1);
       }
     };
     fetchJackpotStatus();
@@ -45,6 +51,8 @@ export default function ResultsAnalysisProgress({
         const currentProgress = updatedSimulation.progress || 0;
         setProgress(currentProgress);
         setTotalCombinations(updatedSimulation.total_combinations || 0);
+        setError(null);
+        setErrorCount(0);
 
         // If simulation is completed but analysis hasn't started, trigger it
         if (
@@ -71,7 +79,13 @@ export default function ResultsAnalysisProgress({
         }
       } catch (error) {
         console.error("Error updating analysis progress:", error);
-        clearInterval(intervalId);
+        setError("Failed to update analysis progress");
+        setErrorCount((prev) => prev + 1);
+
+        // Only clear interval if we've had multiple consecutive errors
+        if (errorCount >= 3) {
+          clearInterval(intervalId);
+        }
       }
     };
 
@@ -80,11 +94,13 @@ export default function ResultsAnalysisProgress({
     // 2. No results yet or results are empty
     // 3. Jackpot is completed
     // 4. Progress is not 100% or results don't exist yet
+    // 5. Not in a permanent error state (3+ consecutive errors)
     if (
       simulation.status === "completed" &&
       (!simulation.results || simulation.results.length === 0) &&
       jackpotStatus === "completed" &&
-      (progress < 100 || !simulation.results)
+      (progress < 100 || !simulation.results) &&
+      errorCount < 3
     ) {
       updateProgress();
       intervalId = setInterval(updateProgress, 2000);
@@ -110,9 +126,16 @@ export default function ResultsAnalysisProgress({
     triggerResultsAnalysis,
     jackpotStatus,
     onAnalysisComplete,
+    errorCount,
   ]);
 
   const getStatusText = () => {
+    if (error) {
+      return errorCount >= 3
+        ? "Analysis failed. Please try refreshing the page."
+        : `${error}. Retrying...`;
+    }
+
     if (jackpotStatus === "open") {
       return "Waiting for all games to be played before analysis can start...";
     }
@@ -132,8 +155,15 @@ export default function ResultsAnalysisProgress({
     return "Preparing for analysis...";
   };
 
-  // Don't show progress bar if simulation is not completed yet
-  if (simulation.status !== "completed") {
+  // Don't show progress bar if:
+  // 1. Simulation is not completed yet
+  // 2. Results already exist
+  // 3. There's a permanent error (3+ consecutive errors)
+  if (
+    simulation.status !== "completed" ||
+    (simulation.results && simulation.results.length > 0) ||
+    errorCount >= 3
+  ) {
     return null;
   }
 
@@ -141,7 +171,7 @@ export default function ResultsAnalysisProgress({
   const displayProgress = jackpotStatus === "completed" ? progress : 0;
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full max-w-xs">
       <div className="flex items-center mb-1">
         <span className="text-xs text-gray-500 mr-2">Analysis Progress:</span>
         <span className="text-xs font-semibold text-gray-700">
@@ -154,7 +184,17 @@ export default function ResultsAnalysisProgress({
           style={{ width: `${displayProgress}%` }}
         ></div>
       </div>
-      <p className="mt-2 text-xs text-gray-500">{getStatusText()}</p>
+      <p
+        className={`mt-2 text-xs ${
+          errorCount >= 3
+            ? "text-red-500"
+            : error
+            ? "text-yellow-500"
+            : "text-gray-500"
+        }`}
+      >
+        {getStatusText()}
+      </p>
     </div>
   );
 }

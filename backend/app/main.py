@@ -1,6 +1,19 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api.v1.router import api_router
+import logging
+from pathlib import Path
+
+# Configure logging
+log_file = Path(__file__).parent.parent / 'errors.log'
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_file),
+        logging.StreamHandler()  # Also keep console output
+    ]
+)
 
 app = FastAPI(
     title="Gambling Awareness API",
