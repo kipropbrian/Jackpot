@@ -1,37 +1,42 @@
+from .config.logging import setup_logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api.v1.router import api_router
-import logging
-from pathlib import Path
+import os
+from typing import List
 
-# Configure logging
-log_file = Path(__file__).parent.parent / 'errors.log'
-logging.basicConfig(
-    level=logging.ERROR,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file),
-        logging.StreamHandler()  # Also keep console output
-    ]
-)
+# Initialize logging before any other operations
+logger = setup_logging()
 
-app = FastAPI(
-    title="Gambling Awareness API",
-    description="API for the Gambling Awareness web application",
-    version="0.1.0"
-)
+# Get CORS allowed origins from environment variable
+def get_allowed_origins() -> List[str]:
+    origins_str = os.getenv("CORS_ALLOWED_ORIGINS")
+    if not origins_str:
+        error_msg = "Required environment variable CORS_ALLOWED_ORIGINS is not set"
+        logger.error(error_msg)
+        raise ValueError(error_msg)
+    return [origin.strip() for origin in origins_str.split(",")]
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # Frontend URLs
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+try:
+    app = FastAPI(
+        title="Gambling Awareness API",
+        description="API for the Gambling Awareness web application",
+        version="0.1.0"
+    )
 
-# Include API router
-app.include_router(api_router, prefix="/api/v1")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=get_allowed_origins(),
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    app.include_router(api_router, prefix="/api/v1")
+
+except Exception as e:
+    logger.error(f"Failed to initialize application: {str(e)}", exc_info=True)
+    raise  # Re-raise the exception after logging it
 
 @app.get("/")
 async def root():

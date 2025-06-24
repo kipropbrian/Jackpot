@@ -1,45 +1,17 @@
+import os
 import requests
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+from ...config.scraper_config import COMMON_HEADERS, GAMES_API_HEADERS
 
-# API URLs
-MULTI_JACKPOT_API_URL = "https://www.ke.sportpesa.com/api/jackpots/multi"
-GAMES_API_URL = "https://jackpot-offer-api.ke.sportpesa.com/api/jackpots/active" 
-# Headers based on the provided cURL command
-COOKIE_STRING = 'visited=1; settings=%7B%22markets_layout%22%3A%22multiple%22%2C%22first-time-multijackpot%22%3A%221%22%7D; spkessid=vftr7e4v13m2glnd5enooq0nq3; device_view=full; locale=en'
+# API URLs from environment variables
+MULTI_JACKPOT_API_URL = os.getenv("SPORTPESA_MULTI_JACKPOT_API_URL")
+if not MULTI_JACKPOT_API_URL:
+    raise ValueError("SPORTPESA_MULTI_JACKPOT_API_URL environment variable is not set")
 
-COMMON_HEADERS = {
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Cache-Control': 'no-cache',
-    'Connection': 'keep-alive',
-    'DNT': '1',
-    'Pragma': 'no-cache',
-    'Referer': 'https://www.ke.sportpesa.com/en/mega-jackpot-pro',
-    'Sec-Fetch-Dest': 'empty',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Site': 'same-origin',
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36',
-    'X-App-Timezone': 'Africa/Nairobi',
-    'X-Requested-With': 'XMLHttpRequest',
-    'sec-ch-ua': '"Google Chrome";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
-    'sec-ch-ua-mobile': '?0',
-    'sec-ch-ua-platform': '"macOS"'
-}
-
-# For GAMES_API_URL, use a more specific set of headers
-GAMES_API_HEADERS = {
-    'Accept': COMMON_HEADERS.get('Accept', 'application/json, text/plain, */*'),
-    'Accept-Language': COMMON_HEADERS.get('Accept-Language', 'en-US,en;q=0.9'),
-    'Connection': COMMON_HEADERS.get('Connection', 'keep-alive'),
-    'User-Agent': COMMON_HEADERS.get('User-Agent'),
-    'Origin': 'https://jackpot-widget.ke.sportpesa.com', # Specific to this API's likely widget source
-    'Referer': 'https://jackpot-widget.ke.sportpesa.com/', # Specific to this API's likely widget source
-    'DNT': COMMON_HEADERS.get('DNT', '1')
-    # Other headers from COMMON_HEADERS like Sec-Fetch-*, X-App-Timezone are omitted as they might be too specific
-}
-MULTI_JACKPOT_HEADERS = COMMON_HEADERS
-
+GAMES_API_URL = os.getenv("SPORTPESA_GAMES_API_URL")
+if not GAMES_API_URL:
+    raise ValueError("SPORTPESA_GAMES_API_URL environment variable is not set")
 
 class SportPesaScraper:
     """
@@ -67,8 +39,8 @@ class SportPesaScraper:
             
             response = requests.get(
                 MULTI_JACKPOT_API_URL,
-                headers=MULTI_JACKPOT_HEADERS,
-                cookies=cookies,
+                headers=COMMON_HEADERS,
+                # cookies=cookies,
                 timeout=15
             )
             response.raise_for_status()
