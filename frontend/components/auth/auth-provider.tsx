@@ -1,19 +1,15 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useAuthStore } from '@/lib/stores/auth-store';
+import { useAuth } from "@/lib/hooks/use-auth";
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-  const { initialize, loading } = useAuthStore();
-
-  useEffect(() => {
-    // Initialize auth state when the app loads
-    initialize();
-  }, [initialize]);
+  // React Query will handle the auth state automatically
+  // No need to manually initialize - it happens when components mount
+  useAuth();
 
   return <>{children}</>;
 }

@@ -18,8 +18,6 @@ def scrape_sportpesa_jackpot():
     Note: This is a synchronous endpoint. FastAPI runs synchronous path 
     operation functions in a separate thread pool.
     """
-    # Temporarily ensure we can see logs during development
-    logger.setLevel(logging.INFO)
     
     try:
         scraper = SportPesaScraper()

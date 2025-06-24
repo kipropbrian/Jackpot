@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '@/lib/stores/auth-store';
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/lib/hooks/use-auth";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -11,34 +11,24 @@ interface AuthGuardProps {
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, session, loading, initialize } = useAuthStore();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const { user, session, loading } = useAuth();
 
   useEffect(() => {
-    const initAuth = async () => {
-      await initialize();
-      setIsInitialized(true);
-    };
-
-    initAuth();
-  }, [initialize]);
-
-  useEffect(() => {
-    if (isInitialized && !loading) {
+    if (!loading) {
       // If not authenticated and not on an auth page, redirect to login
-      if (!session && !pathname.startsWith('/auth/')) {
-        router.push('/auth/login');
+      if (!session && !pathname.startsWith("/auth/")) {
+        router.push("/auth/login");
       }
-      
+
       // If authenticated and on an auth page, redirect to dashboard
-      if (session && pathname.startsWith('/auth/')) {
-        router.push('/dashboard');
+      if (session && pathname.startsWith("/auth/")) {
+        router.push("/dashboard");
       }
     }
-  }, [session, loading, isInitialized, pathname, router]);
+  }, [session, loading, pathname, router]);
 
   // Show loading state while checking authentication
-  if (loading || !isInitialized) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -47,12 +37,12 @@ export default function AuthGuard({ children }: AuthGuardProps) {
   }
 
   // If on a protected route and not authenticated, don't render children
-  if (!session && !pathname.startsWith('/auth/')) {
+  if (!session && !pathname.startsWith("/auth/")) {
     return null;
   }
 
   // If on an auth page and authenticated, don't render children
-  if (session && pathname.startsWith('/auth/')) {
+  if (session && pathname.startsWith("/auth/")) {
     return null;
   }
 
