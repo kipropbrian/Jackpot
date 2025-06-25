@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Simulation } from "@/lib/api/types";
 import { useSimulations } from "@/lib/hooks/use-simulations";
-import { JackpotService } from "@/lib/api/services/jackpot-service";
+import { useJackpot } from "@/lib/hooks/use-jackpot";
 
 interface ResultsAnalysisProgressProps {
   simulation: Simulation;
@@ -12,31 +12,21 @@ export default function ResultsAnalysisProgress({
   simulation,
   onAnalysisComplete,
 }: ResultsAnalysisProgressProps) {
-  const [jackpotStatus, setJackpotStatus] = useState<
-    "open" | "completed" | null
-  >(null);
-  const [error, setError] = useState<string | null>(null);
   const [hasTriggeredAnalysis, setHasTriggeredAnalysis] = useState(false);
   const { updateSimulation } = useSimulations();
+  const {
+    jackpot,
+    loading: jackpotLoading,
+    error: jackpotError,
+  } = useJackpot(simulation.jackpot_id);
 
-  // Fetch jackpot status only once when component mounts
-  useEffect(() => {
-    const fetchJackpotStatus = async () => {
-      try {
-        const jackpot = await JackpotService.getJackpot(simulation.jackpot_id);
-        setJackpotStatus(jackpot.status as "open" | "completed");
-        setError(null);
-      } catch (error) {
-        console.error("Error fetching jackpot status:", error);
-        setError("Failed to fetch jackpot status");
-      }
-    };
-    fetchJackpotStatus();
-  }, [simulation.jackpot_id]);
+  const jackpotStatus = jackpot?.status as "open" | "completed" | null;
+  const error = jackpotError;
 
   // Trigger analysis when conditions are met
   useEffect(() => {
     const shouldTriggerAnalysis =
+      !jackpotLoading &&
       simulation.status === "completed" &&
       !simulation.results &&
       jackpotStatus === "completed" &&
@@ -50,13 +40,13 @@ export default function ResultsAnalysisProgress({
           await updateSimulation(simulation.id, { status: "completed" });
         } catch (error) {
           console.error("Error triggering analysis:", error);
-          setError("Failed to start analysis");
           setHasTriggeredAnalysis(false);
         }
       };
       triggerAnalysis();
     }
   }, [
+    jackpotLoading,
     simulation.status,
     simulation.results,
     jackpotStatus,
@@ -80,6 +70,10 @@ export default function ResultsAnalysisProgress({
   const getStatusText = () => {
     if (error) {
       return error;
+    }
+
+    if (jackpotLoading) {
+      return "Loading jackpot status...";
     }
 
     if (jackpotStatus === "open") {

@@ -251,12 +251,13 @@ class SportPesaScraper:
             "name": jackpot_details["name"],
             "current_amount": jackpot_details["current_amount"],
             "total_matches": jackpot_details["total_matches"],
-            "status": betting_status.lower() if betting_status else "open",
+            # No status field - let database trigger handle jackpot completion status
             "games": games_list,
             "metadata": {
                 "currency": jackpot_details["currency"],
                 "prizes": jackpot_details["prizes"],
-                "bet_amounts": jackpot_details["bet_amounts"]
+                "bet_amounts": jackpot_details["bet_amounts"],
+                "betting_status": betting_status  # Store API betting status in metadata
             }
         }
             

@@ -40,7 +40,7 @@ def scrape_sportpesa_jackpot():
                     "name": jackpot_name,
                     "current_amount": scraped_data.get("current_amount"),
                     "total_matches": scraped_data.get("total_matches"),
-                    "status": scraped_data.get("status", "open"),  # Add status field
+                    # Status is managed by database trigger, not overridden by scraper
                     "metadata": scraped_data.get("metadata", {}),  # Add metadata field
                     "scraped_at": datetime.now(timezone.utc).isoformat(),
                 }
