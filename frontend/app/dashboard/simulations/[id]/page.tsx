@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import SimulationProgressBar from "@/components/simulation/SimulationProgressBar";
 import ResultsAnalysisProgress from "@/components/simulation/ResultsAnalysisProgress";
 import SimulationResults from "@/components/simulation/SimulationResults";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSimulations } from "@/lib/hooks/use-simulations";
-import { Simulation } from "@/lib/api/types";
+import { useSimulation, useSimulations } from "@/lib/hooks/use-simulations";
 
 export default function SimulationDetailsPage({
   params,
@@ -15,70 +14,16 @@ export default function SimulationDetailsPage({
   params: { id: string };
 }) {
   const router = useRouter();
-  const { getSimulation, deleteSimulation, isLoading, error } = useSimulations({
-    autoFetch: false,
-  });
-  const [simulation, setSimulation] = useState<Simulation | null>(null);
+  const { simulation, loading, error, refetch } = useSimulation(params.id);
+  const { deleteSimulation } = useSimulations(); // Only need delete function
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchSimulation = useCallback(async () => {
-    try {
-      const data = await getSimulation(params.id);
-      setSimulation(data);
-    } catch (error) {
-      console.error("Error fetching simulation:", error);
-    }
-  }, [params.id, getSimulation]);
+  // React Query automatically handles polling based on simulation status
 
-  useEffect(() => {
-    fetchSimulation();
-  }, [fetchSimulation]);
-
-  // Poll for progress if simulation is running
-  useEffect(() => {
-    if (!simulation) return;
-
-    // Stop polling if:
-    // 1. Simulation is completed or failed
-    // 2. Results analysis is complete (results exist)
-    if (
-      simulation.status === "completed" ||
-      simulation.status === "failed" ||
-      (simulation.results && simulation.results.length > 0)
-    ) {
-      return;
-    }
-
-    const interval = setInterval(async () => {
-      try {
-        const updated = await getSimulation(params.id);
-        setSimulation(updated);
-
-        // Stop polling if:
-        // 1. Simulation is completed or failed
-        // 2. Results analysis is complete (results exist)
-        if (
-          updated.status === "completed" ||
-          updated.status === "failed" ||
-          (updated.results && updated.results.length > 0)
-        ) {
-          clearInterval(interval);
-        }
-      } catch (error) {
-        console.error("Error polling simulation:", error);
-      }
-    }, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [simulation?.status, simulation?.results, getSimulation, params.id]);
-
-  const handleAnalysisComplete = useCallback(
-    async (updatedSimulation: Simulation) => {
-      // Refresh the simulation data to get the latest results
-      await fetchSimulation();
-    },
-    [fetchSimulation]
-  );
+  const handleAnalysisComplete = useCallback(async () => {
+    // Refresh the simulation data to get the latest results
+    await refetch();
+  }, [refetch]);
 
   const handleDelete = async () => {
     if (!simulation) return;
@@ -144,9 +89,7 @@ export default function SimulationDetailsPage({
   if (error) {
     return (
       <div className="bg-white shadow rounded-lg p-8">
-        <div className="text-red-500">
-          Error loading simulation: {error.message}
-        </div>
+        <div className="text-red-500">Error loading simulation: {error}</div>
         <div className="mt-4">
           <Link
             href="/dashboard/simulations"
@@ -159,10 +102,12 @@ export default function SimulationDetailsPage({
     );
   }
 
-  if (!simulation) {
+  if (loading || !simulation) {
     return (
       <div className="bg-white shadow rounded-lg p-8">
-        <div className="text-gray-500">Simulation not found</div>
+        <div className="text-gray-500">
+          {loading ? "Loading simulation..." : "Simulation not found"}
+        </div>
         <div className="mt-4">
           <Link
             href="/dashboard/simulations"
@@ -190,11 +135,8 @@ export default function SimulationDetailsPage({
             {/* Simulation Progress Bar */}
             <div className="mt-4">
               <SimulationProgressBar
-                simulationId={simulation.id}
-                initialProgress={simulation.progress}
-                status={simulation.status}
-                getSimulation={getSimulation}
-                loading={isLoading}
+                simulation={simulation}
+                loading={loading}
               />
             </div>
           </div>
@@ -282,7 +224,6 @@ export default function SimulationDetailsPage({
           <div className="mt-4">
             <ResultsAnalysisProgress
               simulation={simulation}
-              getSimulation={getSimulation}
               onAnalysisComplete={handleAnalysisComplete}
             />
           </div>

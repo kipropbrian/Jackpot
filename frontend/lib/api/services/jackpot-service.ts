@@ -1,6 +1,6 @@
-import apiClient from '../client';
-import { API_ENDPOINTS } from '../endpoints';
-import type { Jackpot, JackpotListResponse } from '../types';
+import apiClient from "../client";
+import { API_ENDPOINTS } from "../endpoints";
+import type { Jackpot, JackpotListResponse } from "../types";
 
 export const JackpotService = {
   /**
@@ -15,7 +15,7 @@ export const JackpotService = {
    * Fetch a single jackpot by ID (optional, if you add such an endpoint)
    */
   getJackpot: async (id: string): Promise<Jackpot> => {
-    const response = await apiClient.get(`${API_ENDPOINTS.JACKPOTS}/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.JACKPOT(id));
     return response.data;
   },
 };

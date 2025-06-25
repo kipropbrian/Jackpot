@@ -5,135 +5,81 @@ import { JackpotService } from "@/lib/api/services/jackpot-service";
 
 interface ResultsAnalysisProgressProps {
   simulation: Simulation;
-  getSimulation: (id: string) => Promise<Simulation>;
-  onAnalysisComplete?: (updatedSimulation: Simulation) => void;
+  onAnalysisComplete?: () => void;
 }
 
 export default function ResultsAnalysisProgress({
   simulation,
-  getSimulation,
   onAnalysisComplete,
 }: ResultsAnalysisProgressProps) {
-  const [progress, setProgress] = useState(0);
-  const [totalCombinations, setTotalCombinations] = useState(0);
   const [jackpotStatus, setJackpotStatus] = useState<
     "open" | "completed" | null
   >(null);
   const [error, setError] = useState<string | null>(null);
-  const [errorCount, setErrorCount] = useState(0);
-  const { updateSimulation: triggerResultsAnalysis } = useSimulations({
-    autoFetch: false,
-  });
+  const [hasTriggeredAnalysis, setHasTriggeredAnalysis] = useState(false);
+  const { updateSimulation } = useSimulations();
 
-  // Fetch jackpot status when component mounts
+  // Fetch jackpot status only once when component mounts
   useEffect(() => {
     const fetchJackpotStatus = async () => {
       try {
         const jackpot = await JackpotService.getJackpot(simulation.jackpot_id);
         setJackpotStatus(jackpot.status as "open" | "completed");
         setError(null);
-        setErrorCount(0);
       } catch (error) {
         console.error("Error fetching jackpot status:", error);
         setError("Failed to fetch jackpot status");
-        setErrorCount((prev) => prev + 1);
       }
     };
     fetchJackpotStatus();
   }, [simulation.jackpot_id]);
 
+  // Trigger analysis when conditions are met
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    const updateProgress = async () => {
-      try {
-        const updatedSimulation = await getSimulation(simulation.id);
-        const currentProgress = updatedSimulation.progress || 0;
-        setProgress(currentProgress);
-        setTotalCombinations(updatedSimulation.total_combinations || 0);
-        setError(null);
-        setErrorCount(0);
-
-        // If simulation is completed but analysis hasn't started, trigger it
-        if (
-          updatedSimulation.status === "completed" &&
-          !updatedSimulation.results &&
-          jackpotStatus === "completed"
-        ) {
-          // Update status to trigger analysis
-          await triggerResultsAnalysis(simulation.id, { status: "completed" });
-        }
-
-        // Stop polling and notify parent if:
-        // 1. Results exist and are complete
-        // 2. Status is failed
-        // 3. Progress is 100% and results exist
-        if (
-          (updatedSimulation.results && updatedSimulation.results.length > 0) ||
-          updatedSimulation.status === "failed" ||
-          (currentProgress === 100 && updatedSimulation.results)
-        ) {
-          clearInterval(intervalId);
-          onAnalysisComplete?.(updatedSimulation);
-          return;
-        }
-      } catch (error) {
-        console.error("Error updating analysis progress:", error);
-        setError("Failed to update analysis progress");
-        setErrorCount((prev) => prev + 1);
-
-        // Only clear interval if we've had multiple consecutive errors
-        if (errorCount >= 3) {
-          clearInterval(intervalId);
-        }
-      }
-    };
-
-    // Start polling if:
-    // 1. Simulation is completed
-    // 2. No results yet or results are empty
-    // 3. Jackpot is completed
-    // 4. Progress is not 100% or results don't exist yet
-    // 5. Not in a permanent error state (3+ consecutive errors)
-    if (
+    const shouldTriggerAnalysis =
       simulation.status === "completed" &&
-      (!simulation.results || simulation.results.length === 0) &&
+      !simulation.results &&
       jackpotStatus === "completed" &&
-      (progress < 100 || !simulation.results) &&
-      errorCount < 3
-    ) {
-      updateProgress();
-      intervalId = setInterval(updateProgress, 2000);
-    } else if (simulation.results || simulation.progress === 100) {
-      // Set final progress when results are available or progress is complete
-      setProgress(jackpotStatus === "completed" ? 100 : 0);
-      setTotalCombinations(simulation.total_combinations || 0);
-    }
+      !hasTriggeredAnalysis &&
+      !error;
 
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
+    if (shouldTriggerAnalysis) {
+      const triggerAnalysis = async () => {
+        try {
+          setHasTriggeredAnalysis(true);
+          await updateSimulation(simulation.id, { status: "completed" });
+        } catch (error) {
+          console.error("Error triggering analysis:", error);
+          setError("Failed to start analysis");
+          setHasTriggeredAnalysis(false);
+        }
+      };
+      triggerAnalysis();
+    }
   }, [
-    simulation.id,
     simulation.status,
     simulation.results,
-    simulation.progress,
-    simulation.total_combinations,
-    progress,
-    getSimulation,
-    triggerResultsAnalysis,
     jackpotStatus,
-    onAnalysisComplete,
-    errorCount,
+    hasTriggeredAnalysis,
+    error,
+    simulation.id,
+    updateSimulation,
   ]);
+
+  // Check if analysis is complete and notify parent
+  useEffect(() => {
+    if (
+      simulation.results &&
+      simulation.results.length > 0 &&
+      onAnalysisComplete
+    ) {
+      onAnalysisComplete();
+    }
+  }, [simulation.results, onAnalysisComplete]);
 
   const getStatusText = () => {
     if (error) {
-      return errorCount >= 3
-        ? "Analysis failed. Please try refreshing the page."
-        : `${error}. Retrying...`;
+      return error;
     }
 
     if (jackpotStatus === "open") {
@@ -144,30 +90,27 @@ export default function ResultsAnalysisProgress({
       return "Analysis completed";
     }
 
-    if (progress === 100) {
-      return "Analysis completed";
+    if (hasTriggeredAnalysis) {
+      return `Analyzing ${simulation.total_combinations.toLocaleString()} combinations...`;
     }
 
-    if (!simulation.results && simulation.status === "completed") {
-      return `Analyzing ${totalCombinations.toLocaleString()} combinations...`;
-    }
-
-    return "Preparing for analysis...";
+    return "Ready for analysis";
   };
 
   // Don't show progress bar if:
   // 1. Simulation is not completed yet
   // 2. Results already exist
-  // 3. There's a permanent error (3+ consecutive errors)
+  // 3. There's an error
   if (
     simulation.status !== "completed" ||
     (simulation.results && simulation.results.length > 0) ||
-    errorCount >= 3
+    error
   ) {
-    return null;
+    return <div className="text-sm text-gray-500">{getStatusText()}</div>;
   }
 
-  // Show actual progress only if jackpot is completed
+  // Show progress bar
+  const progress = simulation.progress || 0;
   const displayProgress = jackpotStatus === "completed" ? progress : 0;
 
   return (
@@ -184,17 +127,7 @@ export default function ResultsAnalysisProgress({
           style={{ width: `${displayProgress}%` }}
         ></div>
       </div>
-      <p
-        className={`mt-2 text-xs ${
-          errorCount >= 3
-            ? "text-red-500"
-            : error
-            ? "text-yellow-500"
-            : "text-gray-500"
-        }`}
-      >
-        {getStatusText()}
-      </p>
+      <p className="mt-2 text-xs text-gray-500">{getStatusText()}</p>
     </div>
   );
 }

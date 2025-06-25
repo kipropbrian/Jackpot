@@ -6,9 +6,7 @@ import SimulationForm from "@/components/simulation/simulation-form";
 
 export default function NewSimulationPage() {
   const router = useRouter();
-  const { createSimulation, isLoading, error } = useSimulations({
-    autoFetch: false,
-  });
+  const { createSimulation, error } = useSimulations();
 
   // Handler for SimulationForm
   const handleSimulationSubmit = async (values: {
@@ -34,7 +32,7 @@ export default function NewSimulationPage() {
       <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
-            {error.message}
+            {error}
           </div>
         )}
         <SimulationForm onSubmit={handleSimulationSubmit} />

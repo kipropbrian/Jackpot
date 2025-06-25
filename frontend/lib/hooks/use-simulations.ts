@@ -1,149 +1,111 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { SimulationService } from '../api/services/simulation-service';
-import { 
-  Simulation, 
-  SimulationCreate, 
-  SimulationUpdate, 
-  SimulationListResponse 
-} from '../api/types';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { SimulationService } from "../api/services/simulation-service";
+import { Simulation, SimulationCreate, SimulationUpdate } from "../api/types";
 
 interface UseSimulationsOptions {
-  initialPage?: number;
+  page?: number;
   pageSize?: number;
-  autoFetch?: boolean;
 }
 
 export function useSimulations(options: UseSimulationsOptions = {}) {
-  const { initialPage = 1, pageSize = 10, autoFetch = true } = options;
-  
-  const [simulations, setSimulations] = useState<Simulation[]>([]);
-  const [currentPage, setCurrentPage] = useState(initialPage);
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const { page = 1, pageSize = 10 } = options;
+  const queryClient = useQueryClient();
 
-  // Fetch simulations
-  const fetchSimulations = useCallback(async (page = currentPage) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const response = await SimulationService.getSimulations(page, pageSize);
-      setSimulations(response.simulations);
-      setTotalCount(response.total);
-      setCurrentPage(page);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch simulations'));
-      console.error('Error fetching simulations:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, pageSize]);
+  // Fetch simulations with React Query
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["simulations", page, pageSize],
+    queryFn: () => SimulationService.getSimulations(page, pageSize),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  // Create a new simulation
-  const createSimulation = useCallback(async (data: SimulationCreate) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const newSimulation = await SimulationService.createSimulation(data);
-      setSimulations(prev => [newSimulation, ...prev]);
-      setTotalCount(prev => prev + 1);
-      return newSimulation;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to create simulation'));
-      console.error('Error creating simulation:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Create simulation mutation
+  const createMutation = useMutation({
+    mutationFn: (data: SimulationCreate) =>
+      SimulationService.createSimulation(data),
+    onSuccess: () => {
+      // Invalidate and refetch simulations
+      queryClient.invalidateQueries({ queryKey: ["simulations"] });
+    },
+  });
 
-  // Get a single simulation
-  const getSimulation = useCallback(async (id: string) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      return await SimulationService.getSimulation(id);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to get simulation'));
-      console.error('Error getting simulation:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // Update simulation mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: SimulationUpdate }) =>
+      SimulationService.updateSimulation(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["simulations"] });
+      queryClient.invalidateQueries({ queryKey: ["simulation"] }); // Also invalidate individual simulation queries
+    },
+  });
 
-  // Update a simulation
-  const updateSimulation = useCallback(async (id: string, data: SimulationUpdate) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const updatedSimulation = await SimulationService.updateSimulation(id, data);
-      setSimulations(prev => 
-        prev.map(sim => sim.id === id ? updatedSimulation : sim)
-      );
-      return updatedSimulation;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to update simulation'));
-      console.error('Error updating simulation:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Delete a simulation
-  const deleteSimulation = useCallback(async (id: string) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      await SimulationService.deleteSimulation(id);
-      setSimulations(prev => prev.filter(sim => sim.id !== id));
-      setTotalCount(prev => prev - 1);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to delete simulation'));
-      console.error('Error deleting simulation:', err);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Change page
-  const goToPage = useCallback((page: number) => {
-    if (page < 1) page = 1;
-    const maxPage = Math.ceil(totalCount / pageSize);
-    if (page > maxPage) page = maxPage;
-    
-    setCurrentPage(page);
-    fetchSimulations(page);
-  }, [fetchSimulations, totalCount, pageSize]);
-
-  // Auto-fetch on mount if enabled
-  useEffect(() => {
-    if (autoFetch) {
-      fetchSimulations(initialPage);
-    }
-  }, [autoFetch, fetchSimulations, initialPage]);
+  // Delete simulation mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => SimulationService.deleteSimulation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["simulations"] });
+      queryClient.invalidateQueries({ queryKey: ["simulation"] });
+    },
+  });
 
   return {
-    simulations,
-    totalCount,
-    currentPage,
+    simulations: data?.simulations || [],
+    totalCount: data?.total || 0,
+    currentPage: page,
     pageSize,
     isLoading,
+    error: error?.message || null,
+    refetch,
+
+    // Mutations
+    createSimulation: createMutation.mutateAsync,
+    updateSimulation: (id: string, data: SimulationUpdate) =>
+      updateMutation.mutateAsync({ id, data }),
+    deleteSimulation: deleteMutation.mutateAsync,
+
+    // Mutation states
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+
+    createError: createMutation.error?.message || null,
+    updateError: updateMutation.error?.message || null,
+    deleteError: deleteMutation.error?.message || null,
+  };
+}
+
+// Separate hook for individual simulation
+export function useSimulation(id: string | undefined) {
+  const {
+    data: simulation,
+    isLoading: loading,
     error,
-    fetchSimulations,
-    createSimulation,
-    getSimulation,
-    updateSimulation,
-    deleteSimulation,
-    goToPage,
+    refetch,
+  } = useQuery({
+    queryKey: ["simulation", id],
+    queryFn: () => SimulationService.getSimulation(id!),
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: (query) => {
+      // Auto-refetch every 10 seconds if simulation is running
+      // or if it's completed but no results yet (for analysis progress)
+      const sim = query.state.data as Simulation | undefined;
+      if (
+        sim?.status === "running" ||
+        (sim?.status === "completed" &&
+          (!sim?.results || sim?.results.length === 0))
+      ) {
+        return 10000; // 10 seconds
+      }
+      return false; // Don't auto-refetch otherwise
+    },
+  });
+
+  return {
+    simulation: simulation || null,
+    loading,
+    error: error?.message || null,
+    refetch,
   };
 }

@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Jackpot } from "../api/types";
 import { JackpotService } from "../api/services/jackpot-service";
 
 export function useJackpots() {

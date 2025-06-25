@@ -1,20 +1,23 @@
-import { useState, useEffect } from 'react';
-import type { Jackpot } from '../api/types';
-import { JackpotService } from '../api/services/jackpot-service';
+import { useQuery } from "@tanstack/react-query";
+import { JackpotService } from "../api/services/jackpot-service";
 
 export function useJackpot(id: string | undefined) {
-  const [jackpot, setJackpot] = useState<Jackpot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: jackpot,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["jackpot", id],
+    queryFn: () => JackpotService.getJackpot(id!),
+    enabled: !!id, // Only run query if id exists
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    JackpotService.getJackpot(id)
-      .then(setJackpot)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  return { jackpot, loading, error };
+  return {
+    jackpot: jackpot || null,
+    loading,
+    error: error?.message || null,
+    refetch,
+  };
 }

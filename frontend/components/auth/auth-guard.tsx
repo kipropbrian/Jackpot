@@ -11,7 +11,7 @@ interface AuthGuardProps {
 export default function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, session, loading } = useAuth();
+  const { session, loading } = useAuth();
 
   useEffect(() => {
     if (!loading) {
