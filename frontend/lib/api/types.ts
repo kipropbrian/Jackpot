@@ -52,6 +52,13 @@ export interface Game {
   betting_status?: string;
 }
 
+export interface JackpotMetadata {
+  currency?: string;
+  prizes?: Record<string, number>;
+  bet_amounts?: Record<string, number>;
+  betting_status?: string;
+}
+
 export interface Jackpot {
   id: string;
   jackpot_api_id: string;
@@ -60,6 +67,8 @@ export interface Jackpot {
   total_matches: number;
   scraped_at: string;
   status: "open" | "completed";
+  completed_at?: string;
+  metadata?: JackpotMetadata;
   games: Game[];
 }
 
