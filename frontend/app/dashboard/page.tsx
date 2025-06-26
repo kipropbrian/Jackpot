@@ -2,15 +2,33 @@
 
 import { useMemo } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
+import { useJackpots } from "@/lib/hooks/use-jackpots";
 
 export default function DashboardPage() {
   const { simulations, isLoading: isSimulationsLoading } = useSimulations();
+  const { jackpots, loading: isJackpotsLoading } = useJackpots();
+
+  const currentJackpot = useMemo(() => {
+    if (!jackpots || jackpots.length === 0) return null;
+
+    // First, try to find an active jackpot (status: "open")
+    const activeJackpot = jackpots.find((jackpot) => jackpot.status === "open");
+    if (activeJackpot) return activeJackpot;
+
+    // If no active jackpot, return the latest one (most recent scraped_at)
+    return jackpots.reduce((latest, current) => {
+      const latestDate = new Date(latest.scraped_at);
+      const currentDate = new Date(current.scraped_at);
+      return currentDate > latestDate ? current : latest;
+    });
+  }, [jackpots]);
 
   const stats = useMemo(() => {
     if (!simulations) {
       return {
         totalSimulations: 0,
         completedSimulations: 0,
+        runningSimulations: 0,
         totalSpent: 0,
         totalWon: 0,
         averageWinRate: 0,
@@ -27,6 +45,9 @@ export default function DashboardPage() {
     const completedSims = simulations.filter(
       (sim) => sim.status === "completed"
     );
+    const runningSims = simulations.filter(
+      (sim) => sim.status === "running" || sim.status === "pending"
+    );
     const totalSpent = simulations.reduce(
       (sum, sim) => sum + (sim.total_cost || 0),
       0
@@ -42,6 +63,7 @@ export default function DashboardPage() {
     return {
       totalSimulations: simulations.length,
       completedSimulations: completedSims.length,
+      runningSimulations: runningSims.length,
       totalSpent,
       totalWon,
       averageWinRate: winRates.length
@@ -71,8 +93,24 @@ export default function DashboardPage() {
     };
   }, [simulations]);
 
-  if (isSimulationsLoading) {
-    return <div className="text-gray-900 text-sm">Loading...</div>;
+  const formatCurrency = (amount: number) => {
+    return `KSh ${Math.round(amount).toLocaleString()}`;
+  };
+
+  const calculateJackpotOdds = () => {
+    // SportPesa Mega Jackpot odds: 1 in 4,782,969 for 17 correct predictions
+    const odds = 1 / 4782969;
+    return (odds * 100).toFixed(7);
+  };
+
+  if (isSimulationsLoading || isJackpotsLoading) {
+    return (
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <div className="text-gray-900 text-sm">Loading dashboard...</div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -126,6 +164,11 @@ export default function DashboardPage() {
                     className="font-medium text-blue-700 hover:text-blue-900"
                   >
                     View all simulations
+                    {stats.runningSimulations > 0 && (
+                      <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        {stats.runningSimulations} running
+                      </span>
+                    )}
                   </a>
                 </div>
               </div>
@@ -155,8 +198,10 @@ export default function DashboardPage() {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         Current Mega Jackpot
                       </dt>
-                      <dd className="text-3xl font-semibold text-gray-900">
-                        KSh 0
+                      <dd className="text-2xl sm:text-3xl font-semibold text-gray-900 whitespace-nowrap overflow-hidden text-ellipsis">
+                        {currentJackpot
+                          ? formatCurrency(currentJackpot.current_amount)
+                          : "Loading..."}
                       </dd>
                     </dl>
                   </div>
@@ -169,6 +214,17 @@ export default function DashboardPage() {
                     className="font-medium text-green-700 hover:text-green-900"
                   >
                     View jackpot details
+                    {currentJackpot && (
+                      <span
+                        className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          currentJackpot.status === "open"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {currentJackpot.status === "open" ? "Active" : "Closed"}
+                      </span>
+                    )}
                   </a>
                 </div>
               </div>
@@ -199,7 +255,7 @@ export default function DashboardPage() {
                         Winning Probability
                       </dt>
                       <dd className="text-3xl font-semibold text-gray-900">
-                        0.0000001%
+                        {calculateJackpotOdds()}%
                       </dd>
                     </dl>
                   </div>
@@ -229,7 +285,7 @@ export default function DashboardPage() {
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Combinations
+                        Total Combinations Tested
                       </dt>
                       <dd className="mt-1 text-3xl font-semibold text-gray-900">
                         {stats.totalCombinations.toLocaleString()}
@@ -249,20 +305,30 @@ export default function DashboardPage() {
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Winning Percentage
+                        Average Win Rate
                       </dt>
                       <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        {stats.winningPercentage.toFixed(2)}%
+                        {stats.averageWinRate.toFixed(2)}%
                       </dd>
                     </div>
                   </div>
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Payout
+                        Total Amount Spent
                       </dt>
                       <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        KSh {stats.totalPayout.toLocaleString()}
+                        {formatCurrency(stats.totalSpent)}
+                      </dd>
+                    </div>
+                  </div>
+                  <div className="bg-white overflow-hidden shadow rounded-lg">
+                    <div className="px-4 py-5 sm:p-6">
+                      <dt className="text-sm font-medium text-gray-500 truncate">
+                        Total Amount Won
+                      </dt>
+                      <dd className="mt-1 text-3xl font-semibold text-gray-900">
+                        {formatCurrency(stats.totalWon)}
                       </dd>
                     </div>
                   </div>
@@ -271,18 +337,8 @@ export default function DashboardPage() {
                       <dt className="text-sm font-medium text-gray-500 truncate">
                         Net Loss
                       </dt>
-                      <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        KSh {stats.netLoss.toLocaleString()}
-                      </dd>
-                    </div>
-                  </div>
-                  <div className="bg-white overflow-hidden shadow rounded-lg">
-                    <div className="px-4 py-5 sm:p-6">
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        Best Match Count
-                      </dt>
-                      <dd className="mt-1 text-3xl font-semibold text-gray-900">
-                        {stats.bestMatchCount}
+                      <dd className="mt-1 text-3xl font-semibold text-red-600">
+                        {formatCurrency(stats.netLoss)}
                       </dd>
                     </div>
                   </div>
@@ -323,7 +379,9 @@ export default function DashboardPage() {
                       Create New Simulation
                     </p>
                     <p className="text-sm text-gray-500">
-                      Run a new jackpot simulation
+                      {currentJackpot
+                        ? `Simulate the ${currentJackpot.name} jackpot`
+                        : "Run a new jackpot simulation"}
                     </p>
                   </a>
                 </div>
@@ -346,13 +404,13 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <a href="/education/odds" className="focus:outline-none">
+                  <a href="/dashboard/jackpots" className="focus:outline-none">
                     <span className="absolute inset-0" aria-hidden="true" />
                     <p className="text-sm font-medium text-gray-900">
-                      Learn About Odds
+                      View Current Jackpots
                     </p>
                     <p className="text-sm text-gray-500">
-                      Understand how jackpot odds work
+                      See all available jackpots and their details
                     </p>
                   </a>
                 </div>

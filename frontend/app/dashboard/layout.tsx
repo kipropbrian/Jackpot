@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { signOut } from "@/lib/supabase/auth-helpers";
 import { useQueryClient } from "@tanstack/react-query";
+import NotificationBell from "@/components/notifications/notification-bell";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -106,6 +107,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </div>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:items-center">
+                {/* Notification Bell */}
+                <NotificationBell />
+
                 <div className="ml-3 relative">
                   <div className="flex items-center space-x-3">
                     <div className="text-sm">

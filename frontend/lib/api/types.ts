@@ -36,6 +36,31 @@ export interface SimulationListResponse {
   total: number;
 }
 
+// Notification types
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: "simulation_completed" | "simulation_failed" | "system_announcement";
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+  read: boolean;
+  created_at: string;
+}
+
+export interface NotificationCreate {
+  type: "simulation_completed" | "simulation_failed" | "system_announcement";
+  title: string;
+  message: string;
+  data?: Record<string, any>;
+}
+
+export interface NotificationListResponse {
+  notifications: Notification[];
+  total: number;
+  unread_count: number;
+}
+
 export interface Game {
   id: string;
   game_api_id: string;
