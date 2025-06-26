@@ -3,7 +3,7 @@
 import { ReactNode } from "react";
 import AuthGuard from "@/components/auth/auth-guard";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { signOut } from "@/lib/supabase/auth-helpers";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,17 +14,9 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user, profile, loading } = useAuth();
+  const router = useRouter();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
-
-  // Debug logging
-  console.log("Dashboard Layout - Auth Data:", {
-    user: !!user,
-    profile,
-    loading,
-    profileRole: profile?.role,
-    isSuperadmin: profile?.role === "superadmin",
-  });
 
   // Base navigation items available to all users
   const baseNavigation = [
@@ -65,16 +57,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       ? [...baseNavigation, ...adminNavigation]
       : baseNavigation;
 
-  console.log(
-    "Navigation items:",
-    navigation.map((n) => n.name)
-  );
-
   const handleLogout = async () => {
     try {
       await signOut();
       // Clear all cached data on logout
       queryClient.clear();
+      // Redirect to home page
+      router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -128,10 +117,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           Admin
                         </span>
                       )}
-                      {/* Debug info */}
-                      <span className="ml-2 text-xs text-gray-400">
-                        (Role: {profile?.role || "loading..."})
-                      </span>
                     </div>
                     <button
                       onClick={handleLogout}

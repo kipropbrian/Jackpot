@@ -12,9 +12,9 @@ export function useSignIn() {
   return useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       signInWithEmail(email, password),
-    onSuccess: () => {
-      // Invalidate auth queries to refetch user data
-      queryClient.invalidateQueries({ queryKey: ["auth"] });
+    onSuccess: async () => {
+      // Refetch auth queries to ensure auth state is updated before resolving
+      await queryClient.refetchQueries({ queryKey: ["auth"] });
     },
   });
 }
@@ -32,8 +32,8 @@ export function useSignUp() {
       password: string;
       fullName: string;
     }) => signUpWithEmail(email, password, { full_name: fullName }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auth"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["auth"] });
     },
   });
 }
@@ -43,9 +43,11 @@ export function useSignOut() {
 
   return useMutation({
     mutationFn: signOut,
-    onSuccess: () => {
-      // Clear all cache on logout
+    onSuccess: async () => {
+      // Clear all cache on logout and refetch auth queries to update state
       queryClient.clear();
+      // Also refetch auth queries to ensure state is properly cleared
+      await queryClient.refetchQueries({ queryKey: ["auth"] });
     },
   });
 }
