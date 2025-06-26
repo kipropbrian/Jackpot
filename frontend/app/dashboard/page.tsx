@@ -1,73 +1,74 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 
 export default function DashboardPage() {
   const { simulations, isLoading: isSimulationsLoading } = useSimulations();
-  const [stats, setStats] = useState({
-    totalSimulations: 0,
-    completedSimulations: 0,
-    totalSpent: 0,
-    totalWon: 0,
-    averageWinRate: 0,
-    bestWinRate: 0,
-    totalCombinations: 0,
-    winningCombinations: 0,
-    winningPercentage: 0,
-    totalPayout: 0,
-    netLoss: 0,
-    bestMatchCount: 0,
-  });
 
-  useEffect(() => {
-    if (simulations) {
-      const completedSims = simulations.filter(
-        (sim) => sim.status === "completed"
-      );
-      const totalSpent = simulations.reduce(
-        (sum, sim) => sum + (sim.total_cost || 0),
-        0
-      );
-      const totalWon = completedSims.reduce(
-        (sum, sim) => sum + (sim.results?.total_payout || 0),
-        0
-      );
-      const winRates = completedSims.map(
-        (sim) => sim.results?.winning_percentage || 0
-      );
-
-      setStats({
-        totalSimulations: simulations.length,
-        completedSimulations: completedSims.length,
-        totalSpent,
-        totalWon,
-        averageWinRate: winRates.length
-          ? winRates.reduce((a, b) => a + b, 0) / winRates.length
-          : 0,
-        bestWinRate: winRates.length ? Math.max(...winRates) : 0,
-        totalCombinations: completedSims.reduce(
-          (sum, sim) => sum + (sim.total_combinations || 0),
-          0
-        ),
-        winningCombinations: completedSims.reduce(
-          (sum, sim) => sum + (sim.results?.total_winning_combinations || 0),
-          0
-        ),
-        winningPercentage: completedSims.length
-          ? completedSims.reduce(
-              (sum, sim) => sum + (sim.results?.winning_percentage || 0),
-              0
-            ) / completedSims.length
-          : 0,
-        totalPayout: totalWon,
-        netLoss: totalSpent - totalWon,
-        bestMatchCount: completedSims.reduce(
-          (max, sim) => Math.max(max, sim.results?.best_match_count || 0),
-          0
-        ),
-      });
+  const stats = useMemo(() => {
+    if (!simulations) {
+      return {
+        totalSimulations: 0,
+        completedSimulations: 0,
+        totalSpent: 0,
+        totalWon: 0,
+        averageWinRate: 0,
+        bestWinRate: 0,
+        totalCombinations: 0,
+        winningCombinations: 0,
+        winningPercentage: 0,
+        totalPayout: 0,
+        netLoss: 0,
+        bestMatchCount: 0,
+      };
     }
+
+    const completedSims = simulations.filter(
+      (sim) => sim.status === "completed"
+    );
+    const totalSpent = simulations.reduce(
+      (sum, sim) => sum + (sim.total_cost || 0),
+      0
+    );
+    const totalWon = completedSims.reduce(
+      (sum, sim) => sum + (sim.results?.total_payout || 0),
+      0
+    );
+    const winRates = completedSims.map(
+      (sim) => sim.results?.winning_percentage || 0
+    );
+
+    return {
+      totalSimulations: simulations.length,
+      completedSimulations: completedSims.length,
+      totalSpent,
+      totalWon,
+      averageWinRate: winRates.length
+        ? winRates.reduce((a, b) => a + b, 0) / winRates.length
+        : 0,
+      bestWinRate: winRates.length ? Math.max(...winRates) : 0,
+      totalCombinations: completedSims.reduce(
+        (sum, sim) => sum + (sim.total_combinations || 0),
+        0
+      ),
+      winningCombinations: completedSims.reduce(
+        (sum, sim) => sum + (sim.results?.total_winning_combinations || 0),
+        0
+      ),
+      winningPercentage: completedSims.length
+        ? completedSims.reduce(
+            (sum, sim) => sum + (sim.results?.winning_percentage || 0),
+            0
+          ) / completedSims.length
+        : 0,
+      totalPayout: totalWon,
+      netLoss: totalSpent - totalWon,
+      bestMatchCount: completedSims.reduce(
+        (max, sim) => Math.max(max, sim.results?.best_match_count || 0),
+        0
+      ),
+    };
   }, [simulations]);
 
   if (isSimulationsLoading) {

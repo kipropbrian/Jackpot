@@ -1,15 +1,11 @@
 "use client";
 
-import { useAuth } from "@/lib/hooks/use-auth";
-
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-  // React Query will handle the auth state automatically
-  // No need to manually initialize - it happens when components mount
-  useAuth();
-
+  // React Query will handle the auth state automatically when components that need auth mount
+  // No need to call useAuth here as it causes infinite re-renders
   return <>{children}</>;
 }

@@ -14,10 +14,20 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, profile, loading } = useAuth();
   const queryClient = useQueryClient();
 
-  const navigation = [
+  // Debug logging
+  console.log("Dashboard Layout - Auth Data:", {
+    user: !!user,
+    profile,
+    loading,
+    profileRole: profile?.role,
+    isSuperadmin: profile?.role === "superadmin",
+  });
+
+  // Base navigation items available to all users
+  const baseNavigation = [
     {
       name: "Dashboard",
       href: "/dashboard",
@@ -39,6 +49,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname === "/dashboard/profile",
     },
   ];
+
+  // Admin navigation items for superadmins
+  const adminNavigation = [
+    {
+      name: "Admin Panel",
+      href: "/admin",
+      current: pathname.startsWith("/admin"),
+    },
+  ];
+
+  // Combine navigation based on user role
+  const navigation =
+    profile?.role === "superadmin"
+      ? [...baseNavigation, ...adminNavigation]
+      : baseNavigation;
+
+  console.log(
+    "Navigation items:",
+    navigation.map((n) => n.name)
+  );
 
   const handleLogout = async () => {
     try {
@@ -75,7 +105,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         item.current
                           ? "border-blue-500 text-gray-900"
                           : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                      } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                      } inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                        item.name === "Admin Panel"
+                          ? "text-red-600 hover:text-red-700"
+                          : ""
+                      }`}
                     >
                       {item.name}
                     </Link>
@@ -85,7 +119,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="hidden sm:ml-6 sm:flex sm:items-center">
                 <div className="ml-3 relative">
                   <div className="flex items-center space-x-3">
-                    <span className="text-sm text-gray-700">{user?.email}</span>
+                    <div className="text-sm">
+                      <span className="text-gray-700">
+                        {profile?.full_name || user?.email}
+                      </span>
+                      {profile?.role === "superadmin" && (
+                        <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                          Admin
+                        </span>
+                      )}
+                      {/* Debug info */}
+                      <span className="ml-2 text-xs text-gray-400">
+                        (Role: {profile?.role || "loading..."})
+                      </span>
+                    </div>
                     <button
                       onClick={handleLogout}
                       className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
@@ -110,7 +157,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   item.current
                     ? "bg-blue-50 border-blue-500 text-blue-700"
                     : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
-                } block pl-3 pr-4 py-2 border-l-4 text-base font-medium`}
+                } block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  item.name === "Admin Panel" ? "text-red-600" : ""
+                }`}
               >
                 {item.name}
               </Link>

@@ -74,3 +74,12 @@ export interface Jackpot {
 }
 
 export type JackpotListResponse = Jackpot[];
+
+// Pagination types
+export interface PaginatedResponse<T> {
+  data: T[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}

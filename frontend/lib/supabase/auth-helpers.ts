@@ -1,5 +1,5 @@
-import { supabase } from './client';
-import { User, Session } from '@supabase/supabase-js';
+import { supabase } from "./client";
+import { User, Session } from "@supabase/supabase-js";
 
 /**
  * Get the current user session
@@ -7,7 +7,7 @@ import { User, Session } from '@supabase/supabase-js';
 export const getSession = async (): Promise<Session | null> => {
   const { data, error } = await supabase.auth.getSession();
   if (error) {
-    console.error('Error getting session:', error.message);
+    console.error("Error getting session:", error.message);
     return null;
   }
   return data.session;
@@ -19,10 +19,35 @@ export const getSession = async (): Promise<Session | null> => {
 export const getUser = async (): Promise<User | null> => {
   const { data, error } = await supabase.auth.getUser();
   if (error) {
-    console.error('Error getting user:', error.message);
+    console.error("Error getting user:", error.message);
     return null;
   }
   return data.user;
+};
+
+/**
+ * Get user profile including role - uses RPC to bypass RLS recursion
+ */
+export const getUserProfile = async (): Promise<{
+  role: string;
+  full_name: string;
+  is_active: boolean;
+} | null> => {
+  const user = await getUser();
+  if (!user) return null;
+
+  // Use RPC function to get user profile to avoid RLS recursion
+  const { data, error } = await supabase.rpc("get_user_profile", {
+    user_id: user.id,
+  });
+
+  if (error) {
+    console.error("Error getting user profile:", error.message);
+    return null;
+  }
+
+  // The RPC function returns an array, so we need to get the first item
+  return data && data.length > 0 ? data[0] : null;
 };
 
 /**
@@ -33,18 +58,22 @@ export const signInWithEmail = async (email: string, password: string) => {
     email,
     password,
   });
-  
+
   if (error) {
     throw error;
   }
-  
+
   return data;
 };
 
 /**
  * Sign up with email and password
  */
-export const signUpWithEmail = async (email: string, password: string, metadata?: { full_name?: string }) => {
+export const signUpWithEmail = async (
+  email: string,
+  password: string,
+  metadata?: { full_name?: string }
+) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -52,11 +81,11 @@ export const signUpWithEmail = async (email: string, password: string, metadata?
       data: metadata,
     },
   });
-  
+
   if (error) {
     throw error;
   }
-  
+
   return data;
 };
 
@@ -75,12 +104,12 @@ export const signOut = async () => {
  */
 export const updateUserProfile = async (userData: { full_name?: string }) => {
   const { data, error } = await supabase.auth.updateUser({
-    data: userData
+    data: userData,
   });
-  
+
   if (error) {
     throw error;
   }
-  
+
   return data.user;
 };
