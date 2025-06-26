@@ -20,6 +20,7 @@ export interface SimulationCreate {
   name: string;
   total_combinations: number;
   cost_per_bet: number;
+  jackpot_id: string;
 }
 
 export interface SimulationUpdate {
