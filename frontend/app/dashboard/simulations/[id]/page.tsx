@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import SimulationProgressBar from "@/components/simulation/SimulationProgressBar";
 import ResultsAnalysisProgress from "@/components/simulation/ResultsAnalysisProgress";
 import SimulationResults from "@/components/simulation/SimulationResults";
+import SimulationDetailsSkeleton from "@/components/simulation/simulation-details-skeleton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSimulation, useSimulations } from "@/lib/hooks/use-simulations";
@@ -102,12 +103,14 @@ export default function SimulationDetailsPage({
     );
   }
 
-  if (loading || !simulation) {
+  if (loading) {
+    return <SimulationDetailsSkeleton />;
+  }
+
+  if (!simulation) {
     return (
       <div className="bg-white shadow rounded-lg p-8">
-        <div className="text-gray-500">
-          {loading ? "Loading simulation..." : "Simulation not found"}
-        </div>
+        <div className="text-gray-500">Simulation not found</div>
         <div className="mt-4">
           <Link
             href="/dashboard/simulations"

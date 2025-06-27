@@ -28,17 +28,20 @@ export const getUser = async (): Promise<User | null> => {
 /**
  * Get user profile including role - uses RPC to bypass RLS recursion
  */
-export const getUserProfile = async (): Promise<{
+export const getUserProfile = async (
+  user?: User | null
+): Promise<{
   role: string;
   full_name: string;
   is_active: boolean;
 } | null> => {
-  const user = await getUser();
-  if (!user) return null;
+  // If no user provided, fetch it (for backward compatibility)
+  const currentUser = user || (await getUser());
+  if (!currentUser) return null;
 
   // Use RPC function to get user profile to avoid RLS recursion
   const { data, error } = await supabase.rpc("get_user_profile", {
-    user_id: user.id,
+    user_id: currentUser.id,
   });
 
   if (error) {

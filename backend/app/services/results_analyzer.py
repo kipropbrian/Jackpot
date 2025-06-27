@@ -173,7 +173,8 @@ class ResultsAnalyzer:
     # Public helpers
     # ---------------------------------------------------------------------
     def _fetch_games_with_results(self) -> List[Dict[str, Any]]:
-        """Retrieve finished games (i.e., with recorded scores) for the jackpot.
+        """
+        Retrieve finished games (i.e., with recorded scores) for the jackpot.
 
         A game is considered finished when both ``score_home`` and
         ``score_away`` are not ``NULL``.

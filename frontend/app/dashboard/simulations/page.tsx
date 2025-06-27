@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { Simulation } from "@/lib/api/types";
+import SimulationsListSkeleton from "@/components/simulation/simulations-list-skeleton";
 
 export default function SimulationsPage() {
   const { simulations, totalCount, isLoading, error, deleteSimulation } =
@@ -90,9 +91,7 @@ export default function SimulationsPage() {
 
       <div className="border-t border-gray-200">
         {isLoading ? (
-          <div className="px-4 py-5 sm:p-6 flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
+          <SimulationsListSkeleton />
         ) : simulations.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">

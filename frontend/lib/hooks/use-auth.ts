@@ -17,11 +17,11 @@ export function useAuth() {
   } = useQuery({
     queryKey: ["auth"],
     queryFn: async (): Promise<AuthData> => {
-      const [user, session, profile] = await Promise.all([
-        getUser(),
-        getSession(),
-        getUserProfile(),
-      ]);
+      const [user, session] = await Promise.all([getUser(), getSession()]);
+
+      // Only fetch profile if we have a user, and pass the user to avoid duplicate getUser call
+      const profile = user ? await getUserProfile(user) : null;
+
       return { user, session, profile };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
