@@ -1,6 +1,8 @@
 from typing import List, Dict, Any
 import logging
 from app.config.database import supabase
+from app.services.email_service import EmailService
+from app.api.v1.notifications import create_simulation_completion_notification
 
 # Configure a module-level logger. In FastAPI Uvicorn apps, the root logger is
 # usually configured already; the fallback basicConfig ensures logs still show
@@ -145,6 +147,9 @@ class ResultsAnalyzer:
             if not response.data:
                 logger.error("[ResultsAnalyzer] Failed to store results for simulation %s", self.simulation_id)
             
+            # Send notifications after successful analysis
+            self._send_completion_notifications(summary)
+            
             return summary
             
         except Exception as e:
@@ -215,3 +220,65 @@ class ResultsAnalyzer:
     def _count_matches(self, predictions: List[str]) -> int:
         """Count how many predictions match the actual results."""
         return sum(p == a for p, a in zip(predictions, self.actual_results_tuple))
+    
+    def _send_completion_notifications(self, summary: Dict[str, Any]) -> None:
+        """Send in-app and email notifications for completed analysis."""
+        try:
+            # Get simulation details for notifications
+            sim_response = supabase.table("simulations").select(
+                "user_id, name"
+            ).eq("id", self.simulation_id).single().execute()
+            
+            if not sim_response.data:
+                logger.error(f"[ResultsAnalyzer] Could not find simulation {self.simulation_id} for notifications")
+                return
+            
+            user_id = sim_response.data["user_id"]
+            simulation_name = sim_response.data["name"]
+            
+            # Extract data from summary
+            total_combinations = summary["analysis"]["total_combinations"]
+            winning_combinations = summary["total_winning_combinations"]
+            total_payout = summary["total_payout"]
+            win_rate = summary["winning_percentage"]
+            best_match_count = summary["best_match_count"]
+            actual_results = summary["analysis"]["actual_results"]
+            
+            # Send in-app notification
+            try:
+                create_simulation_completion_notification(
+                    user_id=user_id,
+                    simulation_id=self.simulation_id,
+                    simulation_name=simulation_name,
+                    total_combinations=total_combinations,
+                    winning_combinations=winning_combinations,
+                    total_payout=total_payout
+                )
+                logger.info(f"[ResultsAnalyzer] Created in-app notification for user {user_id}")
+            except Exception as e:
+                logger.error(f"[ResultsAnalyzer] Failed to create in-app notification: {e}")
+            
+            # Send email notification
+            try:
+                email_success = EmailService.send_simulation_completion_email(
+                    user_id=user_id,
+                    simulation_id=self.simulation_id,
+                    simulation_name=simulation_name,
+                    total_combinations=total_combinations,
+                    winning_combinations=winning_combinations,
+                    win_rate=win_rate,
+                    total_payout=total_payout,
+                    best_match_count=best_match_count,
+                    actual_results=actual_results
+                )
+                
+                if email_success:
+                    logger.info(f"[ResultsAnalyzer] Successfully sent email notification to user {user_id}")
+                else:
+                    logger.warning(f"[ResultsAnalyzer] Failed to send email notification to user {user_id}")
+                    
+            except Exception as e:
+                logger.error(f"[ResultsAnalyzer] Error sending email notification: {e}")
+                
+        except Exception as e:
+            logger.error(f"[ResultsAnalyzer] Error in notification sending: {e}")

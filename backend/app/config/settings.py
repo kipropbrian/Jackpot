@@ -21,3 +21,8 @@ DEBUG = ENVIRONMENT == "development"
 CORS_ORIGINS = [
     "http://localhost:3000",  # Frontend URL
 ]
+
+# Email settings
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+EMAIL_FROM = os.getenv("EMAIL_FROM", "notifications@resend.dev")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")

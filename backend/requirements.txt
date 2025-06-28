@@ -5,3 +5,4 @@ python-dotenv==1.1.0
 supabase==2.15.2
 pydantic==2.11.5
 httpx==0.28.0
+resend==2.6.0
