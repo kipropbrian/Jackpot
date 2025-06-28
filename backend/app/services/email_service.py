@@ -22,7 +22,7 @@ class EmailService:
         """Get user email preferences from the database."""
         try:
             response = supabase.table("profiles").select(
-                "email, email_notifications, full_name, display_name"
+                "email, email_notifications, full_name"
             ).eq("id", user_id).single().execute()
             
             if response.data:
@@ -194,7 +194,7 @@ class EmailService:
                 return False
             
             # Get user name (fallback to email if no name)
-            user_name = user_prefs.get("full_name") or user_prefs.get("display_name") or user_email.split("@")[0]
+            user_name = user_prefs.get("full_name") or user_email.split("@")[0]
             
             # Create email content
             html_content = EmailService._create_simulation_completion_email_html(

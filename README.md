@@ -9,6 +9,7 @@ A full-stack application for simulating sports betting combinations and analyzin
 - Real-time progress tracking
 - Results analysis when games are complete
 - **Email notifications for simulation completion** ✨ NEW
+- **Admin simulation creation for completed jackpots** ✨ NEW
 - Admin interface for managing jackpots and users
 - Responsive web interface
 
@@ -34,18 +35,49 @@ The platform now sends email notifications when simulation analysis is complete:
    ```
 3. Run the database migration to add email preferences:
    ```sql
-   -- This adds email preference columns to profiles table
+   -- This adds email preference column to profiles table
    ALTER TABLE profiles
-   ADD COLUMN IF NOT EXISTS email_notifications_enabled BOOLEAN DEFAULT true,
-   ADD COLUMN IF NOT EXISTS email_simulation_completion BOOLEAN DEFAULT true;
+   ADD COLUMN IF NOT EXISTS email_notifications BOOLEAN DEFAULT true;
    ```
 
 ### User Controls:
 
 - Users can manage email preferences in their profile page
-- Global email notification toggle
-- Specific toggle for simulation completion emails
+- Global email notification toggle controls all email types
 - Users are opted-in by default but can disable anytime
+
+## Admin Features
+
+### Simulation Creation for Completed Jackpots ✨ NEW
+
+Administrators now have special privileges to create simulations for jackpots that have already completed:
+
+#### Admin Capabilities:
+
+- **Create simulations for ANY jackpot** - including completed ones
+- **Immediate analysis** - simulations for completed jackpots run analysis instantly
+- **Special UI indicators** - admin interface shows which jackpots are completed
+- **Dedicated admin endpoint** - uses separate API endpoint with proper authorization
+
+#### How It Works:
+
+1. **Admin Access**: Only users with `superadmin` role can access this feature
+2. **Enhanced Jackpot Selection**: Admins see both open and completed jackpots in the selection dropdown
+3. **Visual Indicators**: Completed jackpots show "(Admin Access)" in the dropdown
+4. **Admin Notice**: Special warning shows when creating simulations for completed jackpots
+5. **Instant Analysis**: For completed jackpots, analysis runs immediately after combination generation
+
+#### Admin Workflow:
+
+```
+Admin creates simulation → Combinations generated → Analysis runs immediately → Email notification sent
+```
+
+#### Regular User Workflow:
+
+```
+User creates simulation → Combinations generated → Wait for jackpot completion → Analysis runs → Email notification sent
+```
 
 ## Tech Stack
 
@@ -115,13 +147,26 @@ The platform now sends email notifications when simulation analysis is complete:
 
 The application uses Supabase with the following key tables:
 
-- `profiles` - User profiles and preferences (including email settings)
+- `profiles` - User profiles and preferences (including email settings and roles)
 - `jackpots` - Sports betting jackpots
 - `games` - Individual games within jackpots
 - `simulations` - User simulation configurations
 - `bet_combinations` - Generated betting combinations
 - `simulation_results` - Analysis results
 - `notifications` - In-app notifications
+
+## Admin System
+
+### User Roles:
+
+- **Regular Users**: Can create simulations for open jackpots only
+- **Superadmins**: Can create simulations for any jackpot (open or completed)
+
+### Admin Authentication:
+
+- Backend uses `get_current_superadmin()` dependency for admin endpoints
+- Frontend uses `useIsAdmin()` hook to check admin status
+- Admin routes protected with role-based access control
 
 ## Email Template Design
 
@@ -133,6 +178,21 @@ The email notifications feature beautiful, mobile-responsive HTML emails that in
 - Visual representation of actual game results
 - Call-to-action button to view full results
 - Footer with preference management link
+
+## API Endpoints
+
+### Regular User Endpoints:
+
+- `POST /api/v1/simulations/` - Create simulation (open jackpots only)
+- `GET /api/v1/simulations/` - List user simulations
+- `GET /api/v1/simulations/{id}` - Get simulation details
+
+### Admin Endpoints:
+
+- `POST /api/v1/admin/simulations` - Create simulation (any jackpot, including completed)
+- `GET /api/v1/admin/simulations` - List all simulations
+- `GET /api/v1/admin/users` - User management
+- `GET /api/v1/admin/system/stats` - System statistics
 
 ## Contributing
 

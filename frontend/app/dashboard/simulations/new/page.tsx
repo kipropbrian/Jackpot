@@ -35,8 +35,9 @@ export default function NewSimulationPage() {
             Create New Simulation
           </h1>
           <p className="mt-2 text-base text-gray-600">
-            Set up parameters for your jackpot simulation. Choose an active
-            jackpot and define your betting strategy.
+            Set up parameters for your jackpot simulation. Choose a jackpot and
+            define your betting strategy.
+            {/* Admin note will be shown by useIsAdmin hook if applicable */}
           </p>
         </div>
 
@@ -122,9 +123,10 @@ export default function NewSimulationPage() {
             <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-blue-800 text-sm">
                 <strong>Note:</strong> Simulations for open jackpots will be
-                processed once the jackpot closes and results are available. You
-                can track the progress of your simulation in the simulations
-                dashboard.
+                processed once the jackpot closes and results are available.
+                Simulations for completed jackpots (admin only) will be analyzed
+                immediately. You can track the progress of your simulation in
+                the simulations dashboard.
               </p>
             </div>
           </div>
