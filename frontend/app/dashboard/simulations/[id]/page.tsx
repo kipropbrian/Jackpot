@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import SimulationResults from "@/components/simulation/SimulationResults";
+import { GameCombinationsVisualization } from "@/components/simulation/game-combinations-visualization";
 import SimulationDetailsSkeleton from "@/components/simulation/simulation-details-skeleton";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -65,19 +66,6 @@ export default function SimulationDetailsPage({
         setIsDeleting(false);
       }
     }
-  };
-
-  // Format date for display
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   // Format status for display with appropriate color
@@ -234,23 +222,15 @@ export default function SimulationDetailsPage({
                 KSh {simulation.total_cost.toLocaleString()}
               </dd>
             </div>
-            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500">Created</dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {formatDate(simulation.created_at)}
-              </dd>
-            </div>
-            {simulation.completed_at && (
-              <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Completed</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {formatDate(simulation.completed_at)}
-                </dd>
-              </div>
-            )}
           </dl>
         </div>
       </div>
+
+      {/* Game Combinations Visualization */}
+      <GameCombinationsVisualization
+        specification={simulation.specification || null}
+        jackpotName={jackpot?.name}
+      />
 
       {/* Analysis Results */}
       {simulation.results && <SimulationResults simulation={simulation} />}

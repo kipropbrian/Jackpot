@@ -2,6 +2,7 @@ import apiClient from "../client";
 import { API_ENDPOINTS } from "../endpoints";
 import {
   Simulation,
+  SimulationWithSpecification,
   SimulationCreate,
   SimulationUpdate,
   SimulationListResponse,
@@ -31,9 +32,9 @@ export const SimulationService = {
   },
 
   /**
-   * Get a specific simulation by ID
+   * Get a specific simulation by ID with specification data
    */
-  getSimulation: async (id: string): Promise<Simulation> => {
+  getSimulation: async (id: string): Promise<SimulationWithSpecification> => {
     const response = await apiClient.get(API_ENDPOINTS.SIMULATION(id));
     return response.data;
   },

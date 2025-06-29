@@ -2,7 +2,11 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { SimulationService } from "../api/services/simulation-service";
-import { Simulation, SimulationCreate, SimulationUpdate } from "../api/types";
+import {
+  SimulationWithSpecification,
+  SimulationCreate,
+  SimulationUpdate,
+} from "../api/types";
 
 interface UseSimulationsOptions {
   page?: number;
@@ -102,7 +106,7 @@ export function useSimulation(id: string | undefined) {
     refetchInterval: (query) => {
       // Auto-refetch every 10 seconds if simulation is running
       // or if it's completed but no results yet (for analysis progress)
-      const sim = query.state.data as Simulation | undefined;
+      const sim = query.state.data as SimulationWithSpecification | undefined;
       if (
         sim?.status === "running" ||
         (sim?.status === "completed" && !sim?.results)
