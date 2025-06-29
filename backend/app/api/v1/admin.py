@@ -215,24 +215,29 @@ async def get_simulation_details(
 ):
     """Get detailed information about a specific simulation"""
     
-    # Get simulation with user info
-    sim_response = supabase.table("simulations").select(
-        "*, profiles!simulations_user_id_fkey(email, full_name)"
-    ).eq("id", str(simulation_id)).single().execute()
-    
-    if not sim_response.data:
-        raise HTTPException(status_code=404, detail="Simulation not found")
-    
-    simulation = sim_response.data
-    profile = simulation.get("profiles", {}) or {}
-    
-    # Get simulation results if available
-    results_response = supabase.table("simulation_results").select("*").eq(
-        "simulation_id", str(simulation_id)
-    ).single().execute()
-    
-    return {
-        "simulation": {
+    try:
+        # Get simulation with user info
+        sim_response = supabase.table("simulations").select(
+            "*, profiles!simulations_user_id_fkey(email, full_name)"
+        ).eq("id", str(simulation_id)).single().execute()
+        
+        if not sim_response.data:
+            raise HTTPException(status_code=404, detail="Simulation not found")
+        
+        simulation = sim_response.data
+        profile = simulation.get("profiles", {}) or {}
+        
+        # Get simulation results if available (use maybeSingle since results are optional)
+        try:
+            results_response = supabase.table("simulation_results").select("*").eq(
+                "simulation_id", str(simulation_id)
+            ).maybeSingle().execute()
+            detailed_results = results_response.data if results_response.data else None
+        except Exception as e:
+            # If results query fails, just set to None
+            detailed_results = None
+        
+        return {
             "id": simulation["id"],
             "user_id": simulation["user_id"],
             "user_email": profile.get("email"),
@@ -247,7 +252,11 @@ async def get_simulation_details(
             "status": simulation["status"],
             "created_at": simulation["created_at"],
             "completed_at": simulation["completed_at"],
-            "results": simulation.get("results")
-        },
-        "detailed_results": results_response.data if results_response.data else None
-    } 
+            "results": simulation.get("results"),
+            "detailed_results": detailed_results
+        }
+    except Exception as e:
+        if "PGRST116" in str(e) or "0 rows" in str(e):
+            raise HTTPException(status_code=404, detail="Simulation not found")
+        else:
+            raise HTTPException(status_code=500, detail=f"Error fetching simulation: {str(e)}") 

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
+import { useIsAdmin } from "@/lib/hooks/use-admin";
 import {
   Jackpot,
   SimulationCreate,
@@ -74,6 +75,7 @@ const sliderStyles = `
 const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
   const { simulations } = useSimulations();
   const { jackpots, loading: jackpotsLoading } = useJackpots();
+  const { isAdmin } = useIsAdmin();
 
   // Form state
   const [selectedJackpot, setSelectedJackpot] = useState<Jackpot | null>(null);
@@ -297,7 +299,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {jackpots
-                ?.filter((j) => j.status === "open")
+                ?.filter((j) => j.status === "open" || isAdmin)
                 .map((jackpot) => (
                   <div
                     key={jackpot.id}
@@ -333,8 +335,17 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                           </svg>
                         )}
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          jackpot.status === "open"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {jackpot.status === "open" ? "Active" : "Completed"}
+                        {jackpot.status === "completed" &&
+                          isAdmin &&
+                          " (Admin)"}
                       </span>
                     </div>
 
@@ -385,7 +396,8 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
           {/* No Jackpots Message */}
           {!jackpotsLoading &&
             (!jackpots ||
-              jackpots.filter((j) => j.status === "open").length === 0) && (
+              jackpots.filter((j) => j.status === "open" || isAdmin).length ===
+                0) && (
               <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                 <div className="text-gray-400 text-4xl mb-4">🎰</div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -402,6 +414,41 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
             <p className="text-red-600 text-sm mt-3">{errors.jackpot}</p>
           )}
         </div>
+
+        {/* Admin Notice for Completed Jackpots */}
+        {selectedJackpot &&
+          selectedJackpot.status === "completed" &&
+          isAdmin && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-amber-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-amber-800">
+                    Admin Notice: Completed Jackpot
+                  </h3>
+                  <div className="mt-2 text-sm text-amber-700">
+                    <p>
+                      You are creating a simulation for a completed jackpot. The
+                      simulation will run immediately since all game results are
+                      already available.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* Creation Method Selection */}
         {selectedJackpot && (
