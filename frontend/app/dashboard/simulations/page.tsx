@@ -1,13 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { Simulation } from "@/lib/api/types";
 import SimulationsListSkeleton from "@/components/simulation/simulations-list-skeleton";
+import { DeleteConfirmationModal } from "@/components/simulation/delete-confirmation-modal";
 
 export default function SimulationsPage() {
-  const { simulations, totalCount, isLoading, error, deleteSimulation } =
-    useSimulations();
+  const {
+    simulations,
+    totalCount,
+    isLoading,
+    error,
+    deleteSimulation,
+    isDeleting,
+  } = useSimulations();
+
+  // State for delete modal
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    simulation: Simulation | null;
+  }>({
+    isOpen: false,
+    simulation: null,
+  });
 
   // Format date for display
   const formatDate = (dateString: string) => {
@@ -48,14 +65,29 @@ export default function SimulationsPage() {
     );
   };
 
-  // Handle simulation deletion
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this simulation?")) {
-      try {
-        await deleteSimulation(id);
-      } catch (error) {
-        console.error("Failed to delete simulation:", error);
-      }
+  // Handle opening delete modal
+  const handleDeleteClick = (simulation: Simulation) => {
+    setDeleteModal({
+      isOpen: true,
+      simulation,
+    });
+  };
+
+  // Handle closing delete modal
+  const handleCloseDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      simulation: null,
+    });
+  };
+
+  // Handle confirmed deletion
+  const handleConfirmDelete = async (simulationId: string) => {
+    try {
+      await deleteSimulation(simulationId);
+    } catch (error) {
+      console.error("Failed to delete simulation:", error);
+      // You could add a toast notification here
     }
   };
 
@@ -176,7 +208,7 @@ export default function SimulationsPage() {
                         View
                       </Link>
                       <button
-                        onClick={() => handleDelete(simulation.id)}
+                        onClick={() => handleDeleteClick(simulation)}
                         className="text-red-600 hover:text-red-900"
                       >
                         Delete
@@ -233,6 +265,16 @@ export default function SimulationsPage() {
           </div>
         )}
       </div>
+
+      {deleteModal.isOpen && (
+        <DeleteConfirmationModal
+          isOpen={deleteModal.isOpen}
+          onClose={handleCloseDeleteModal}
+          simulation={deleteModal.simulation}
+          onConfirm={handleConfirmDelete}
+          isDeleting={isDeleting}
+        />
+      )}
     </div>
   );
 }

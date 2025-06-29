@@ -9,6 +9,8 @@ import {
   GameSelectionValidation,
   Simulation,
 } from "@/lib/api/types";
+import apiClient from "@/lib/api/client";
+import { API_ENDPOINTS } from "@/lib/api/endpoints";
 
 export interface NewSimulationFormProps {
   onSubmit?: (values: SimulationCreate) => void;
@@ -121,19 +123,14 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
     if (!selectedJackpot) return;
 
     try {
-      // Call validation API
-      const response = await fetch("/api/simulations/validate-selections", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          game_selections: gameSelections,
-          jackpot_id: selectedJackpot.id,
-        }),
+      // Call validation API using the API client
+      const response = await apiClient.post(API_ENDPOINTS.VALIDATE_SELECTIONS, {
+        game_selections: gameSelections,
+        jackpot_id: selectedJackpot.id,
       });
 
-      if (response.ok) {
-        const validationResult = await response.json();
-        setValidation(validationResult);
+      if (response.data) {
+        setValidation(response.data);
       }
     } catch (error) {
       console.error("Validation error:", error);
