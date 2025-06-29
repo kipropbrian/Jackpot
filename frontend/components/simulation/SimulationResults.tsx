@@ -99,23 +99,25 @@ export default function SimulationResults({
             </div>
             <div
               className={`p-4 rounded-lg ${
-                results.net_profit > 0 ? "bg-green-50" : "bg-red-50"
+                analysis.net_profit > 0 ? "bg-green-50" : "bg-red-50"
               }`}
             >
               <dt
                 className={`text-sm font-medium ${
-                  results.net_profit > 0 ? "text-green-700" : "text-red-700"
+                  analysis.net_profit > 0 ? "text-green-700" : "text-red-700"
                 }`}
               >
-                Net {results.net_profit > 0 ? "Profit" : "Loss"}
+                Net {analysis.net_profit > 0 ? "Profit" : "Loss"}
               </dt>
               <dd
                 className={`text-xl font-bold ${
-                  results.net_profit > 0 ? "text-green-900" : "text-red-900"
+                  analysis.net_profit > 0 ? "text-green-900" : "text-red-900"
                 }`}
               >
                 {formatCurrency(
-                  results.net_profit > 0 ? results.net_profit : results.net_loss
+                  analysis.net_profit > 0
+                    ? analysis.net_profit
+                    : results.net_loss
                 )}
               </dd>
             </div>

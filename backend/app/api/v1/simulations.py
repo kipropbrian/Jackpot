@@ -159,9 +159,26 @@ async def get_simulation(
         
         specification = spec_response.data[0] if spec_response.data else None
         
+        # Get simulation results if they exist
+        try:
+            logger.info(f"Fetching results for simulation {simulation_id}")
+            results_response = (
+                supabase.table("simulation_results")
+                .select("*")
+                .eq("simulation_id", simulation_id)
+                .execute()
+            )
+            # In Python client, we get a list - take the first result if it exists
+            results = results_response.data[0] if results_response.data else None
+            logger.info(f"Results response for {simulation_id}: data={results is not None}, count={len(results_response.data) if results_response.data else 0}")
+        except Exception as e:
+            logger.error(f"Failed to fetch results for simulation {simulation_id}: {e}")
+            results = None
+        
         return {
             **simulation,
-            "specification": specification
+            "specification": specification,
+            "results": results
         }
         
     except HTTPException:
@@ -365,3 +382,65 @@ async def validate_game_selections(
 async def get_sportpesa_rules():
     """Get SportPesa betting rules and limits."""
     return SportPesaRules()
+
+@router.get("/{simulation_id}/debug-results")
+async def debug_simulation_results(
+    simulation_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Debug endpoint to check if simulation results exist"""
+    try:
+        # Verify simulation ownership first
+        sim_response = (
+            supabase.table("simulations")
+            .select("id")
+            .eq("id", simulation_id)
+            .eq("user_id", current_user["id"])
+            .single()
+            .execute()
+        )
+        
+        if not sim_response.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Simulation not found"
+            )
+        
+        # Check if results exist using different queries
+        results_info = {}
+        
+        # Query 1: single result (what we use in production)
+        try:
+            single_response = supabase.table("simulation_results").select("*").eq("simulation_id", simulation_id).execute()
+            results_info["single_result"] = len(single_response.data) > 0 if single_response.data else False
+            results_info["single_data"] = single_response.data[0] if single_response.data else None
+        except Exception as e:
+            results_info["single_error"] = str(e)
+        
+        # Query 2: regular select (to see all rows)
+        try:
+            all_response = supabase.table("simulation_results").select("*").eq("simulation_id", simulation_id).execute()
+            results_info["all_results_count"] = len(all_response.data) if all_response.data else 0
+            results_info["all_results_data"] = all_response.data
+        except Exception as e:
+            results_info["all_results_error"] = str(e)
+        
+        # Query 3: count all simulation results
+        try:
+            count_response = supabase.table("simulation_results").select("simulation_id", count="exact").execute()
+            results_info["total_results_in_table"] = count_response.count
+        except Exception as e:
+            results_info["count_error"] = str(e)
+        
+        return {
+            "simulation_id": simulation_id,
+            "debug_info": results_info
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Debug query failed: {str(e)}"
+        )

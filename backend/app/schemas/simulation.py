@@ -111,9 +111,8 @@ class SimulationAnalysisResponse(BaseModel):
     total_payout: Decimal
     total_winners: int
     net_loss: Decimal
-    net_profit: Decimal
     best_match_count: int
-    analysis: Dict[str, Any]
+    analysis: Dict[str, Any]  # Contains net_profit along with other analysis data
     
     class Config:
         from_attributes = True

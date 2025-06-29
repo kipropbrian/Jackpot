@@ -96,7 +96,6 @@ class SpecificationAnalyzer:
                 "total_payout": float(total_payout),
                 "total_winners": total_winners,
                 "net_loss": -net_profit_loss if net_profit_loss < 0 else 0.0,
-                "net_profit": net_profit_loss if net_profit_loss > 0 else 0.0,
                 "best_match_count": best_match_count,
                 "analysis": {
                     "total_combinations": total_combinations,
@@ -106,7 +105,8 @@ class SpecificationAnalyzer:
                     "combination_type": self.specification["combination_type"],
                     "double_games": self.specification["double_games"],
                     "triple_games": self.specification["triple_games"],
-                    "prize_breakdown": self._format_prize_breakdown(prize_level_wins, prize_level_payouts)
+                    "prize_breakdown": self._format_prize_breakdown(prize_level_wins, prize_level_payouts),
+                    "net_profit": net_profit_loss if net_profit_loss > 0 else 0.0
                 }
             }
             
@@ -116,10 +116,14 @@ class SpecificationAnalyzer:
             )
             
             # Store results
-            self._store_results(summary)
-            
-            # Send notifications
-            self._send_completion_notifications(summary)
+            if self._store_results(summary):
+                # Only send notifications if results were stored successfully
+                self._send_completion_notifications(summary)
+                logger.info(f"[SpecificationAnalyzer] Analysis completed and notifications sent for simulation {self.simulation_id}")
+            else:
+                logger.error(f"[SpecificationAnalyzer] Analysis completed but results storage failed for simulation {self.simulation_id} - notifications not sent")
+                self._update_simulation_status("failed")
+                raise Exception("Failed to store simulation results")
             
             return summary
             
@@ -220,16 +224,24 @@ class SpecificationAnalyzer:
         else:
             return "X"
 
-    def _store_results(self, summary: Dict[str, Any]) -> None:
+    def _store_results(self, summary: Dict[str, Any]) -> bool:
         """Store analysis results in the database."""
         try:
+            logger.info(f"[SpecificationAnalyzer] Storing results for simulation {self.simulation_id}")
+            logger.debug(f"[SpecificationAnalyzer] Summary data structure: {summary}")
+            
             response = supabase.table("simulation_results").upsert(summary, on_conflict="simulation_id").execute()
+            
             if not response.data:
-                logger.error(f"[SpecificationAnalyzer] Failed to store results for simulation {self.simulation_id}")
+                logger.error(f"[SpecificationAnalyzer] Failed to store results for simulation {self.simulation_id} - no data returned")
+                return False
             else:
                 logger.info(f"[SpecificationAnalyzer] Results stored successfully for simulation {self.simulation_id}")
+                return True
+                
         except Exception as e:
             logger.error(f"[SpecificationAnalyzer] Error storing results: {str(e)}")
+            return False
 
     def _update_simulation_status(self, status: str) -> None:
         """Update simulation status in the database."""
