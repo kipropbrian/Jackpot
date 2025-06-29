@@ -21,7 +21,29 @@ export function useSimulations(options: UseSimulationsOptions = {}) {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["simulations", page, pageSize],
     queryFn: () => SimulationService.getSimulations(page, pageSize),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 2 * 60 * 1000, // 2 minutes (reduced from 5 minutes for better responsiveness)
+    refetchInterval: (query) => {
+      // Auto-refetch if there are simulations that might be changing status
+      const simulations = query.state.data?.simulations || [];
+
+      // Check if any simulation is in a transitional state
+      const hasActiveSimulations = simulations.some(
+        (sim: SimulationWithSpecification) =>
+          sim.status === "running" ||
+          sim.enhanced_status === "analyzing" ||
+          sim.enhanced_status === "waiting_for_games" ||
+          (sim.status === "completed" && !sim.results)
+      );
+
+      // If there are active simulations, poll every 15 seconds
+      // This is slightly less frequent than individual simulation polling to reduce load
+      if (hasActiveSimulations) {
+        return 15000; // 15 seconds
+      }
+
+      // Otherwise, don't auto-refetch
+      return false;
+    },
   });
 
   // Create simulation mutation
@@ -94,7 +116,31 @@ export function useSimulation(id: string | undefined) {
     refetchInterval: (query) => {
       // Auto-refetch every 10 seconds if simulation is running or analyzing
       const sim = query.state.data as SimulationWithSpecification | undefined;
-      if (sim?.status === "running" || sim?.enhanced_status === "analyzing") {
+
+      // Continue refetching if:
+      // 1. Simulation is running or analyzing
+      // 2. Simulation is completed but we don't have results yet (this fixes the main issue)
+      // 3. Simulation status indicates results should be available but aren't cached
+      if (
+        sim?.status === "running" ||
+        sim?.enhanced_status === "analyzing" ||
+        (sim?.status === "completed" && !sim?.results) ||
+        (sim?.enhanced_status === "results_available" && !sim?.results)
+      ) {
+        // For completed simulations without results, limit polling to prevent excessive requests
+        if (sim?.status === "completed" && !sim?.results) {
+          const completedAt = sim.completed_at
+            ? new Date(sim.completed_at)
+            : null;
+          const now = new Date();
+          // Stop polling after 10 minutes for completed simulations
+          if (
+            completedAt &&
+            now.getTime() - completedAt.getTime() > 10 * 60 * 1000
+          ) {
+            return false;
+          }
+        }
         return 10000; // 10 seconds
       }
       return false; // Don't auto-refetch otherwise

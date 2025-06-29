@@ -1,8 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { NotificationService } from "../api/services/notification-service";
 import { toast } from "react-hot-toast";
+import { useEffect, useRef } from "react";
+import { Notification } from "../api/types";
 
 export function useNotifications() {
+  const queryClient = useQueryClient();
+  const prevNotificationsRef = useRef<Notification[]>([]);
+
   const {
     data,
     isLoading: loading,
@@ -12,11 +17,65 @@ export function useNotifications() {
     queryKey: ["notifications"],
     queryFn: NotificationService.getNotifications,
     staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: 60 * 1000, // Poll every minute for new notifications
+    refetchInterval: (query) => {
+      // Check if we should poll more frequently for active simulations
+      // We'll check the simulations cache to see if there are active ones
+      const simulationsData = queryClient.getQueryData([
+        "simulations",
+        1,
+        10,
+      ]) as { simulations?: any[] } | undefined;
+      const simulations = simulationsData?.simulations || [];
+
+      const hasActiveSimulations = simulations.some(
+        (sim: any) =>
+          sim.status === "running" ||
+          sim.enhanced_status === "analyzing" ||
+          sim.enhanced_status === "waiting_for_games"
+      );
+
+      // Poll more frequently when there are active simulations
+      if (hasActiveSimulations) {
+        return 30 * 1000; // 30 seconds
+      }
+
+      // Otherwise, poll every minute
+      return 60 * 1000; // 1 minute
+    },
   });
 
+  const notifications = data?.notifications || [];
+
+  // Check for new simulation-related notifications and invalidate simulations list
+  useEffect(() => {
+    if (notifications.length > 0 && prevNotificationsRef.current.length > 0) {
+      const newNotifications = notifications.filter(
+        (notification) =>
+          !prevNotificationsRef.current.some(
+            (prev) => prev.id === notification.id
+          )
+      );
+
+      // Check if any new notifications are simulation-related
+      const hasSimulationNotifications = newNotifications.some(
+        (notification) =>
+          notification.type === "simulation_completed" ||
+          notification.type === "simulation_failed"
+      );
+
+      if (hasSimulationNotifications) {
+        // Invalidate simulations list to ensure fresh data
+        queryClient.invalidateQueries({ queryKey: ["simulations"] });
+        queryClient.invalidateQueries({ queryKey: ["simulation"] });
+      }
+    }
+
+    // Update the previous notifications reference
+    prevNotificationsRef.current = notifications;
+  }, [notifications, queryClient]);
+
   return {
-    notifications: data?.notifications || [],
+    notifications,
     unreadCount: data?.unread_count || 0,
     total: data?.total || 0,
     loading,

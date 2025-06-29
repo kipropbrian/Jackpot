@@ -108,24 +108,23 @@ export default function AdminSimulationDetailsPage({
 
   return (
     <div className="space-y-6">
-      {/* Header with basic info */}
+      {/* Header */}
       <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-          <div>
-            <h1 className="text-lg leading-6 font-medium text-gray-900">
-              {simulation.name}
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Admin View - Specification-based simulation -{" "}
-              {simulation.combination_type} combinations
-            </p>
-          </div>
-          <div className="flex space-x-3">
+        <div className="px-4 py-5 sm:px-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-lg leading-6 font-medium text-gray-900">
+                {simulation.name}
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                Admin view - Specification-based simulation
+              </p>
+            </div>
             <Link
               href="/admin/simulations"
               className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              Back to Admin List
+              Back to List
             </Link>
           </div>
         </div>
@@ -164,7 +163,57 @@ export default function AdminSimulationDetailsPage({
         </div>
       </div>
 
-      {/* Simulation Details */}
+      {/* Analysis Results - MOVED TO THE TOP */}
+      {simulation?.results && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:px-6">
+            <h2 className="text-lg leading-6 font-medium text-gray-900">
+              Simulation Results
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              Analysis results for this simulation
+            </p>
+          </div>
+          <div className="border-t border-gray-200 px-4 py-5">
+            <SimulationResults simulation={simulation} />
+          </div>
+        </div>
+      )}
+
+      {/* Admin Status Messages */}
+      {simulation?.status === "completed" && !simulation?.results && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-amber-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800">
+                Results Missing
+              </h3>
+              <div className="mt-2 text-sm text-amber-700">
+                <p>
+                  This simulation is marked as completed but analysis results
+                  are not available. This might indicate an issue with the
+                  analysis process.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simulation Information - MOVED TO THE BOTTOM */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:px-6">
           <h2 className="text-lg leading-6 font-medium text-gray-900">
@@ -209,88 +258,26 @@ export default function AdminSimulationDetailsPage({
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Total Cost</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                KSH {simulation.total_cost?.toLocaleString() || 0}
+                KSh {simulation.total_cost?.toLocaleString() || 0}
               </dd>
             </div>
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Created</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {simulation.created_at
-                  ? new Date(simulation.created_at).toLocaleString()
-                  : "Unknown"}
+                {new Date(simulation.created_at).toLocaleDateString()}
               </dd>
             </div>
             {simulation.completed_at && (
               <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">Completed</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {new Date(simulation.completed_at).toLocaleString()}
-                </dd>
-              </div>
-            )}
-            {jackpot && (
-              <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">Jackpot</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                  {jackpot.name} - KSH {jackpot.current_amount.toLocaleString()}
+                  {new Date(simulation.completed_at).toLocaleDateString()}
                 </dd>
               </div>
             )}
           </dl>
         </div>
       </div>
-
-      {/* Results Section */}
-      {simulation?.results && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:px-6">
-            <h2 className="text-lg leading-6 font-medium text-gray-900">
-              Simulation Results
-            </h2>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
-              Analysis results for this simulation
-            </p>
-          </div>
-          <div className="border-t border-gray-200 px-4 py-5">
-            <SimulationResults simulation={simulation} />
-          </div>
-        </div>
-      )}
-
-      {/* Admin Status Messages */}
-      {simulation?.status === "completed" && !simulation?.results && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-amber-400"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-amber-800">
-                Analysis Status
-              </h3>
-              <div className="mt-2 text-sm text-amber-700">
-                <p>
-                  This simulation is completed but analysis results are not yet
-                  available.
-                  {jackpot?.status === "completed"
-                    ? " The analysis may be in progress or the user needs to trigger it."
-                    : " Analysis will be available once the jackpot is completed."}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

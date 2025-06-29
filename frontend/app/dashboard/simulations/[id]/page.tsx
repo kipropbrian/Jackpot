@@ -4,6 +4,7 @@ import { useState } from "react";
 import SimulationResults from "@/components/simulation/SimulationResults";
 import { GameCombinationsVisualization } from "@/components/simulation/game-combinations-visualization";
 import SimulationDetailsSkeleton from "@/components/simulation/simulation-details-skeleton";
+import { DeleteConfirmationModal } from "@/components/simulation/delete-confirmation-modal";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSimulation, useSimulations } from "@/lib/hooks/use-simulations";
@@ -19,25 +20,25 @@ export default function SimulationDetailsPage({
   const { jackpot, loading: jackpotLoading } = useJackpot(
     simulation?.jackpot_id
   );
-  const { deleteSimulation } = useSimulations();
-  const [isDeleting, setIsDeleting] = useState(false);
+  const { deleteSimulation, isDeleting } = useSimulations();
 
-  const handleDelete = async () => {
-    if (!simulation) return;
+  // State for delete modal
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-    if (
-      window.confirm(
-        "Are you sure you want to delete this simulation? This action cannot be undone."
-      )
-    ) {
-      setIsDeleting(true);
-      try {
-        await deleteSimulation(simulation.id);
-        router.push("/dashboard/simulations");
-      } catch (err) {
-        console.error("Error deleting simulation:", err);
-        setIsDeleting(false);
-      }
+  const handleDeleteClick = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleConfirmDelete = async (simulationId: string) => {
+    try {
+      await deleteSimulation(simulationId);
+      router.push("/dashboard/simulations");
+    } catch (err) {
+      console.error("Error deleting simulation:", err);
     }
   };
 
@@ -154,74 +155,23 @@ export default function SimulationDetailsPage({
               Back to List
             </Link>
             <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
+              onClick={handleDeleteClick}
+              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
-              {isDeleting ? "Deleting..." : "Delete"}
+              Delete
             </button>
           </div>
         </div>
       </div>
 
-      {/* Simulation Details */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <h2 className="text-lg leading-6 font-medium text-gray-900">
-            Simulation Information
-          </h2>
-          <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            Details and parameters of this specification-based simulation
-          </p>
-        </div>
-        <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
-          <dl className="sm:divide-y sm:divide-gray-200">
-            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500">Status</dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {getStatusBadge(simulation)}
-              </dd>
-            </div>
-            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500">
-                Combination Type
-              </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 capitalize">
-                {simulation.combination_type}
-                {simulation.combination_type === "mixed" && (
-                  <span className="ml-2 text-xs text-gray-500">
-                    ({simulation.double_count} doubles,{" "}
-                    {simulation.triple_count} triples)
-                  </span>
-                )}
-              </dd>
-            </div>
-            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500">
-                Effective Combinations
-              </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {simulation.effective_combinations.toLocaleString()}
-              </dd>
-            </div>
-            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500">Total Cost</dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                KSh {simulation.total_cost.toLocaleString()}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </div>
+      {/* Analysis Results - MOVED TO THE TOP */}
+      {simulation.results && <SimulationResults simulation={simulation} />}
 
       {/* Game Combinations Visualization */}
       <GameCombinationsVisualization
         specification={simulation.specification || null}
         jackpotName={jackpot?.name}
       />
-
-      {/* Analysis Results */}
-      {simulation.results && <SimulationResults simulation={simulation} />}
 
       {/* Enhanced status messages */}
       {simulation.enhanced_status === "waiting_for_games" && (
@@ -288,6 +238,65 @@ export default function SimulationDetailsPage({
           </div>
         </div>
       )}
+
+      {/* Simulation Details - MOVED TO THE BOTTOM */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <h2 className="text-lg leading-6 font-medium text-gray-900">
+            Simulation Information
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-gray-500">
+            Details and parameters of this specification-based simulation
+          </p>
+        </div>
+        <div className="border-t border-gray-200 px-4 py-5 sm:p-0">
+          <dl className="sm:divide-y sm:divide-gray-200">
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Status</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {getStatusBadge(simulation)}
+              </dd>
+            </div>
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">
+                Combination Type
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2 capitalize">
+                {simulation.combination_type}
+                {simulation.combination_type === "mixed" && (
+                  <span className="ml-2 text-xs text-gray-500">
+                    ({simulation.double_count} doubles,{" "}
+                    {simulation.triple_count} triples)
+                  </span>
+                )}
+              </dd>
+            </div>
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">
+                Effective Combinations
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {simulation.effective_combinations.toLocaleString()}
+              </dd>
+            </div>
+            <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500">Total Cost</dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                KSh {simulation.total_cost.toLocaleString()}
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        simulation={simulation}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
