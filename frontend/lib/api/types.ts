@@ -15,6 +15,16 @@ export interface Simulation {
 
   total_cost: number;
   status: "pending" | "running" | "completed" | "failed";
+  enhanced_status?: "waiting_for_games" | "analyzing" | "results_available";
+  jackpot_status?: "open" | "completed";
+  jackpot_name?: string;
+  has_results?: boolean;
+  basic_results?: {
+    total_winners: number;
+    total_payout: number;
+    net_loss: number;
+    best_match_count: number;
+  };
   created_at: string;
   completed_at?: string;
   results?: SimulationResults;

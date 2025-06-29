@@ -10,7 +10,6 @@ export const API_ENDPOINTS = {
   // Simulation endpoints
   SIMULATIONS: `${API_BASE}/simulations/`,
   SIMULATION: (id: string) => `${API_BASE}/simulations/${id}`,
-  ANALYZE_SIMULATION: (id: string) => `${API_BASE}/simulations/${id}/analyze`,
   VALIDATE_SELECTIONS: `${API_BASE}/simulations/validate-selections`,
 
   // Jackpot endpoints

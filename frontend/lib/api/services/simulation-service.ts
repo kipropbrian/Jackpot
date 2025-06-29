@@ -56,14 +56,4 @@ export const SimulationService = {
   deleteSimulation: async (id: string): Promise<void> => {
     await apiClient.delete(API_ENDPOINTS.SIMULATION(id));
   },
-
-  /**
-   * Analyze a completed simulation
-   */
-  analyzeSimulation: async (
-    id: string
-  ): Promise<{ message: string; simulation_id: string }> => {
-    const response = await apiClient.post(API_ENDPOINTS.ANALYZE_SIMULATION(id));
-    return response.data;
-  },
 };

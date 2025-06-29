@@ -98,12 +98,12 @@ async def get_simulations(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0)
 ):
-    """Get all simulations for the current user with pagination."""
+    """Get all simulations for the current user with pagination and enhanced status information."""
     try:
-        # Get simulations with count
+        # Get simulations with jackpot information and results existence
         response = (
             supabase.table("simulations")
-            .select("*", count="exact")
+            .select("*, jackpots!inner(status, name), simulation_results(id)", count="exact")
             .eq("user_id", current_user["id"])
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)
@@ -113,12 +113,87 @@ async def get_simulations(
         simulations = response.data or []
         total_count = response.count or 0
         
+        # Enhance simulations with computed status and prefetched data
+        enhanced_simulations = []
+        for sim in simulations:
+            # Determine enhanced status based on simulation status, jackpot status, and results existence
+            enhanced_status = sim["status"]
+            has_results = bool(sim.get("simulation_results") and len(sim["simulation_results"]) > 0)
+            jackpot_status = sim["jackpots"]["status"] if sim.get("jackpots") else "unknown"
+            
+            if sim["status"] == "completed":
+                if has_results:
+                    enhanced_status = "results_available"
+                elif jackpot_status == "open":
+                    enhanced_status = "waiting_for_games"
+                elif jackpot_status == "completed":
+                    enhanced_status = "analyzing"  # Will be analyzed automatically
+                # If jackpot_status is something else, keep "completed"
+            
+            # Prefetch basic results data if available for faster details page loading
+            basic_results = None
+            if has_results:
+                try:
+                    results_response = (
+                        supabase.table("simulation_results")
+                        .select("total_winners, total_payout, net_loss, best_match_count")
+                        .eq("simulation_id", sim["id"])
+                        .execute()
+                    )
+                    if results_response.data:
+                        basic_results = results_response.data[0]
+                        logger.debug(f"Prefetched basic results for simulation {sim['id']}")
+                except Exception as e:
+                    logger.warning(f"Failed to prefetch results for simulation {sim['id']}: {e}")
+            
+            # Clean up the response and add enhanced information
+            enhanced_sim = {
+                **sim,
+                "enhanced_status": enhanced_status,
+                "jackpot_status": jackpot_status,
+                "jackpot_name": sim["jackpots"]["name"] if sim.get("jackpots") else None,
+                "has_results": has_results,
+                "basic_results": basic_results,  # Prefetched data for faster details loading
+            }
+            
+            # Remove the nested objects to clean up the response
+            enhanced_sim.pop("jackpots", None)
+            enhanced_sim.pop("simulation_results", None)
+            
+            enhanced_simulations.append(enhanced_sim)
+        
+        # Trigger automatic analysis for eligible simulations (run in background)
+        try:
+            # Count how many simulations need analysis
+            needs_analysis = [s for s in enhanced_simulations if s.get("enhanced_status") == "analyzing"]
+            if needs_analysis:
+                logger.info(f"Found {len(needs_analysis)} simulations needing auto-analysis")
+                # Trigger analysis in background thread to avoid blocking the response
+                import threading
+                from app.services.specification_analyzer import SpecificationAnalyzer
+                
+                def trigger_auto_analysis():
+                    for sim in needs_analysis:
+                        try:
+                            analyzer = SpecificationAnalyzer(sim["id"], sim["jackpot_id"])
+                            analyzer.analyze()
+                            logger.info(f"Auto-analysis completed for simulation {sim['id']}")
+                        except Exception as e:
+                            logger.error(f"Auto-analysis failed for simulation {sim['id']}: {e}")
+                
+                analysis_thread = threading.Thread(target=trigger_auto_analysis)
+                analysis_thread.daemon = True
+                analysis_thread.start()
+        except Exception as e:
+            logger.warning(f"Failed to trigger auto-analysis: {e}")
+        
         return SimulationListResponse(
-            simulations=simulations,
+            simulations=enhanced_simulations,
             total=total_count
         )
         
     except Exception as e:
+        logger.error(f"Failed to fetch simulations: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch simulations: {str(e)}"
@@ -225,73 +300,98 @@ async def delete_simulation(
             detail=f"Failed to delete simulation: {str(e)}"
         )
 
-@router.post("/{simulation_id}/analyze")
-async def analyze_simulation(
-    simulation_id: str,
-    background_tasks: BackgroundTasks,
-    current_user: dict = Depends(get_current_user)
-):
-    """Trigger analysis of a completed simulation."""
+@router.post("/trigger-auto-analysis")
+async def trigger_auto_analysis():
+    """Manual endpoint to trigger automatic analysis for eligible simulations."""
     try:
-        # Verify simulation exists and belongs to user
-        sim_response = (
+        # Find completed simulations where jackpot is completed but no results exist  
+        simulations_response = (
             supabase.table("simulations")
-            .select("jackpot_id, status")
-            .eq("id", simulation_id)
-            .eq("user_id", current_user["id"])
-            .single()
+            .select("id, jackpot_id, user_id")
+            .eq("status", "completed")
             .execute()
         )
         
-        if not sim_response.data:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Simulation not found"
-            )
+        eligible_count = 0
         
-        simulation = sim_response.data
+        if simulations_response.data:
+            import threading
+            from app.services.specification_analyzer import SpecificationAnalyzer
+            
+            def run_analysis_batch():
+                for sim in simulations_response.data:
+                    try:
+                        # Check if jackpot is completed
+                        jackpot_response = (
+                            supabase.table("jackpots")
+                            .select("status")
+                            .eq("id", sim["jackpot_id"])
+                            .single()
+                            .execute()
+                        )
+                        
+                        if not jackpot_response.data or jackpot_response.data["status"] != "completed":
+                            continue
+                        
+                        # Check if results already exist
+                        results_response = (
+                            supabase.table("simulation_results")
+                            .select("id")
+                            .eq("simulation_id", sim["id"])
+                            .execute()
+                        )
+                        
+                        if results_response.data:
+                            continue  # Results already exist
+                        
+                        # This simulation is eligible for auto-analysis
+                        logger.info(f"Manual auto-triggering analysis for simulation {sim['id']}")
+                        analyzer = SpecificationAnalyzer(sim["id"], sim["jackpot_id"])
+                        analyzer.analyze()
+                        
+                    except Exception as e:
+                        logger.error(f"Failed to analyze simulation {sim['id']}: {e}")
+                        continue
+            
+            # Count eligible simulations first
+            for sim in simulations_response.data:
+                try:
+                    jackpot_response = (
+                        supabase.table("jackpots")
+                        .select("status")
+                        .eq("id", sim["jackpot_id"])
+                        .single()
+                        .execute()
+                    )
+                    
+                    if not jackpot_response.data or jackpot_response.data["status"] != "completed":
+                        continue
+                    
+                    results_response = (
+                        supabase.table("simulation_results")
+                        .select("id")
+                        .eq("simulation_id", sim["id"])
+                        .execute()
+                    )
+                    
+                    if not results_response.data:
+                        eligible_count += 1
+                except:
+                    continue
+            
+            if eligible_count > 0:
+                # Run analysis in background thread
+                analysis_thread = threading.Thread(target=run_analysis_batch)
+                analysis_thread.daemon = True
+                analysis_thread.start()
         
-        # Check if simulation is completed
-        if simulation["status"] != "completed":
-            error_msg = f"Cannot analyze simulation {simulation_id}: simulation status is '{simulation['status']}', expected 'completed'"
-            logger.error(error_msg)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot analyze simulation: simulation is not completed yet"
-            )
+        return {"message": f"Triggered analysis for {eligible_count} simulations"}
         
-        # Check if jackpot is completed (has results)
-        jackpot_response = (
-            supabase.table("jackpots")
-            .select("status")
-            .eq("id", simulation["jackpot_id"])
-            .single()
-            .execute()
-        )
-        
-        jackpot_status = jackpot_response.data["status"] if jackpot_response.data else "not_found"
-        if not jackpot_response.data or jackpot_status != "completed":
-            error_msg = f"Cannot analyze simulation {simulation_id}: jackpot {simulation['jackpot_id']} status is '{jackpot_status}', expected 'completed'"
-            logger.error(error_msg)
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot analyze simulation: jackpot is not completed yet"
-            )
-        
-        # Trigger analysis in background
-        background_tasks.add_task(
-            SpecificationAnalyzer(simulation_id, simulation["jackpot_id"]).analyze
-        )
-        
-        logger.info(f"Analysis started for simulation {simulation_id} with jackpot {simulation['jackpot_id']}")
-        return {"message": "Analysis started", "simulation_id": simulation_id}
-        
-    except HTTPException:
-        raise
     except Exception as e:
+        logger.error(f"Failed to trigger auto-analysis: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start analysis: {str(e)}"
+            detail=f"Failed to trigger auto-analysis: {str(e)}"
         )
 
 @router.get("/{simulation_id}/preview", response_model=List[CombinationPreview])

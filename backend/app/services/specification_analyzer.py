@@ -4,8 +4,13 @@ from itertools import product
 from app.config.database import supabase
 from app.services.email_service import EmailService
 from app.api.v1.notifications import create_simulation_completion_notification
+import threading
 
 logger = logging.getLogger(__name__)
+
+# Add a class-level set to track running analyses
+_running_analyses = set()
+_analysis_lock = threading.Lock()
 
 class SpecificationAnalyzer:
     """
@@ -55,7 +60,28 @@ class SpecificationAnalyzer:
 
     def analyze(self) -> Dict[str, Any]:
         """Analyze the bet specification against actual game results with prize level tracking."""
+        global _running_analyses, _analysis_lock
+        
+        # Check if analysis is already running for this simulation
+        with _analysis_lock:
+            if self.simulation_id in _running_analyses:
+                logger.info(f"Analysis already running for simulation {self.simulation_id}, skipping")
+                return {}
+            _running_analyses.add(self.simulation_id)
+        
         try:
+            # Check if results already exist
+            existing_results = (
+                supabase.table("simulation_results")
+                .select("id")
+                .eq("simulation_id", self.simulation_id)
+                .execute()
+            )
+            
+            if existing_results.data:
+                logger.info(f"Results already exist for simulation {self.simulation_id}, skipping analysis")
+                return {}
+            
             logger.info(f"[SpecificationAnalyzer] Starting analysis of {self.effective_combinations} combinations")
             
             # Initialize prize level tracking
@@ -131,6 +157,10 @@ class SpecificationAnalyzer:
             logger.error(f"[SpecificationAnalyzer] Error during analysis: {str(e)}")
             self._update_simulation_status("failed")
             raise
+        finally:
+            # Always remove from running analyses
+            with _analysis_lock:
+                _running_analyses.discard(self.simulation_id)
 
     def _fetch_jackpot_metadata(self) -> Dict[str, Any]:
         """Fetch jackpot metadata containing prize information."""

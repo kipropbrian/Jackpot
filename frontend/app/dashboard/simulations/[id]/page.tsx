@@ -19,35 +19,8 @@ export default function SimulationDetailsPage({
   const { jackpot, loading: jackpotLoading } = useJackpot(
     simulation?.jackpot_id
   );
-  const { deleteSimulation, analyzeSimulation } = useSimulations();
+  const { deleteSimulation } = useSimulations();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  const handleAnalyze = async () => {
-    if (!simulation) return;
-
-    setIsAnalyzing(true);
-    try {
-      await analyzeSimulation(simulation.id);
-      await refetch(); // Refresh to get latest status
-    } catch (err) {
-      console.error("Error starting analysis:", err);
-      // Extract and display the actual error message
-      const errorMessage = (() => {
-        if (err && typeof err === "object" && "response" in err) {
-          return (err as { response: { data: { detail?: string } } }).response
-            ?.data?.detail;
-        }
-        if (err instanceof Error) {
-          return err.message;
-        }
-        return "Unknown error occurred";
-      })();
-      alert(`Failed to start analysis: ${errorMessage}`);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!simulation) return;
@@ -68,31 +41,57 @@ export default function SimulationDetailsPage({
     }
   };
 
-  // Format status for display with appropriate color
-  const getStatusBadge = (status: string) => {
+  // Format status for display with appropriate color using enhanced status
+  const getStatusBadge = (simulation: any) => {
+    const statusToUse = simulation.enhanced_status || simulation.status;
     let color = "";
-    switch (status) {
+    let displayText = "";
+
+    switch (statusToUse) {
       case "pending":
         color = "bg-yellow-100 text-yellow-800";
+        displayText = "Pending";
         break;
       case "running":
         color = "bg-blue-100 text-blue-800";
+        displayText = "Running";
         break;
       case "completed":
         color = "bg-green-100 text-green-800";
+        displayText = "Completed";
+        break;
+      case "waiting_for_games":
+        color = "bg-orange-100 text-orange-800";
+        displayText = "Waiting for games";
+        break;
+      case "analyzing":
+        color = "bg-purple-100 text-purple-800";
+        displayText = "Analyzing";
+        break;
+      case "results_available":
+        color = "bg-emerald-100 text-emerald-800";
+        displayText = "Results available";
         break;
       case "failed":
         color = "bg-red-100 text-red-800";
+        displayText = "Failed";
         break;
       default:
         color = "bg-gray-100 text-gray-800";
+        displayText =
+          statusToUse.charAt(0).toUpperCase() + statusToUse.slice(1);
     }
 
     return (
       <span
         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}
+        title={
+          simulation.jackpot_name
+            ? `Jackpot: ${simulation.jackpot_name}`
+            : undefined
+        }
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {displayText}
       </span>
     );
   };
@@ -148,17 +147,6 @@ export default function SimulationDetailsPage({
             </p>
           </div>
           <div className="flex space-x-3">
-            {simulation.status === "completed" &&
-              !simulation.results &&
-              jackpot?.status === "completed" && (
-                <button
-                  onClick={handleAnalyze}
-                  disabled={isAnalyzing}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  {isAnalyzing ? "Analyzing..." : "Analyze Results"}
-                </button>
-              )}
             <Link
               href="/dashboard/simulations"
               className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -191,7 +179,7 @@ export default function SimulationDetailsPage({
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">Status</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {getStatusBadge(simulation.status)}
+                {getStatusBadge(simulation)}
               </dd>
             </div>
             <div className="py-4 sm:py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
@@ -235,60 +223,65 @@ export default function SimulationDetailsPage({
       {/* Analysis Results */}
       {simulation.results && <SimulationResults simulation={simulation} />}
 
-      {/* Status messages */}
-      {simulation.status === "completed" && !simulation.results && (
-        <div
-          className={`border rounded-lg p-4 ${
-            jackpot?.status === "completed"
-              ? "bg-yellow-50 border-yellow-200"
-              : "bg-blue-50 border-blue-200"
-          }`}
-        >
+      {/* Enhanced status messages */}
+      {simulation.enhanced_status === "waiting_for_games" && (
+        <div className="border rounded-lg p-4 bg-orange-50 border-orange-200">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg
-                className={`h-5 w-5 ${
-                  jackpot?.status === "completed"
-                    ? "text-yellow-400"
-                    : "text-blue-400"
-                }`}
+                className="h-5 w-5 text-orange-400"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >
                 <path
                   fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
                   clipRule="evenodd"
                 />
               </svg>
             </div>
             <div className="ml-3">
-              <h3
-                className={`text-sm font-medium ${
-                  jackpot?.status === "completed"
-                    ? "text-yellow-800"
-                    : "text-blue-800"
-                }`}
-              >
-                {jackpot?.status === "completed"
-                  ? "Analysis Ready"
-                  : "Waiting for Jackpot Results"}
+              <h3 className="text-sm font-medium text-orange-800">
+                Waiting for Games to Complete
               </h3>
-              <div
-                className={`mt-2 text-sm ${
-                  jackpot?.status === "completed"
-                    ? "text-yellow-700"
-                    : "text-blue-700"
-                }`}
-              >
+              <div className="mt-2 text-sm text-orange-700">
                 <p>
-                  {jackpot?.status === "completed"
-                    ? 'This simulation is completed and ready for analysis. Click "Analyze Results" to compare your combinations against the actual jackpot results.'
-                    : `Simulation is completed, but the jackpot "${
-                        jackpot?.name || "Unknown"
-                      }" is still ${
-                        jackpot?.status || "pending"
-                      }. Analysis will be available once the jackpot is completed.`}
+                  Your simulation is ready, but the jackpot "
+                  {simulation.jackpot_name || jackpot?.name || "Unknown"}" games
+                  are still in progress. Analysis will be available once all
+                  games are completed.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {simulation.enhanced_status === "analyzing" && (
+        <div className="border rounded-lg p-4 bg-purple-50 border-purple-200">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-purple-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-purple-800">
+                Analysis in Progress
+              </h3>
+              <div className="mt-2 text-sm text-purple-700">
+                <p>
+                  Your simulation is being analyzed automatically. Results will
+                  appear here once the analysis is complete. This usually takes
+                  a few moments depending on the number of combinations.
                 </p>
               </div>
             </div>

@@ -53,15 +53,6 @@ export function useSimulations(options: UseSimulationsOptions = {}) {
     },
   });
 
-  // Analyze simulation mutation
-  const analyzeMutation = useMutation({
-    mutationFn: (id: string) => SimulationService.analyzeSimulation(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["simulations"] });
-      queryClient.invalidateQueries({ queryKey: ["simulation"] });
-    },
-  });
-
   return {
     simulations: data?.simulations || [],
     totalCount: data?.total || 0,
@@ -76,18 +67,15 @@ export function useSimulations(options: UseSimulationsOptions = {}) {
     updateSimulation: (id: string, data: SimulationUpdate) =>
       updateMutation.mutateAsync({ id, data }),
     deleteSimulation: deleteMutation.mutateAsync,
-    analyzeSimulation: analyzeMutation.mutateAsync,
 
     // Mutation states
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
     isDeleting: deleteMutation.isPending,
-    isAnalyzing: analyzeMutation.isPending,
 
     createError: createMutation.error?.message || null,
     updateError: updateMutation.error?.message || null,
     deleteError: deleteMutation.error?.message || null,
-    analyzeError: analyzeMutation.error?.message || null,
   };
 }
 
@@ -104,13 +92,9 @@ export function useSimulation(id: string | undefined) {
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
     refetchInterval: (query) => {
-      // Auto-refetch every 10 seconds if simulation is running
-      // or if it's completed but no results yet (for analysis progress)
+      // Auto-refetch every 10 seconds if simulation is running or analyzing
       const sim = query.state.data as SimulationWithSpecification | undefined;
-      if (
-        sim?.status === "running" ||
-        (sim?.status === "completed" && !sim?.results)
-      ) {
+      if (sim?.status === "running" || sim?.enhanced_status === "analyzing") {
         return 10000; // 10 seconds
       }
       return false; // Don't auto-refetch otherwise

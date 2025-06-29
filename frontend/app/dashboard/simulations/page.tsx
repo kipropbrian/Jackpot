@@ -36,31 +36,57 @@ export default function SimulationsPage() {
     });
   };
 
-  // Format status for display with appropriate color
-  const getStatusBadge = (status: string) => {
+  // Format status for display with appropriate color using enhanced status
+  const getStatusBadge = (simulation: Simulation) => {
+    const statusToUse = simulation.enhanced_status || simulation.status;
     let color = "";
-    switch (status) {
+    let displayText = "";
+
+    switch (statusToUse) {
       case "pending":
         color = "bg-yellow-100 text-yellow-800";
+        displayText = "Pending";
         break;
       case "running":
         color = "bg-blue-100 text-blue-800";
+        displayText = "Running";
         break;
       case "completed":
         color = "bg-green-100 text-green-800";
+        displayText = "Completed";
+        break;
+      case "waiting_for_games":
+        color = "bg-orange-100 text-orange-800";
+        displayText = "Waiting for games";
+        break;
+      case "analyzing":
+        color = "bg-purple-100 text-purple-800";
+        displayText = "Analyzing";
+        break;
+      case "results_available":
+        color = "bg-emerald-100 text-emerald-800";
+        displayText = "Results available";
         break;
       case "failed":
         color = "bg-red-100 text-red-800";
+        displayText = "Failed";
         break;
       default:
         color = "bg-gray-100 text-gray-800";
+        displayText =
+          statusToUse.charAt(0).toUpperCase() + statusToUse.slice(1);
     }
 
     return (
       <span
         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}
+        title={
+          simulation.jackpot_name
+            ? `Jackpot: ${simulation.jackpot_name}`
+            : undefined
+        }
       >
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {displayText}
       </span>
     );
   };
@@ -159,6 +185,12 @@ export default function SimulationsPage() {
                   >
                     Cost
                   </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Results
+                  </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Actions</span>
                   </th>
@@ -179,7 +211,7 @@ export default function SimulationsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {getStatusBadge(simulation.status)}
+                        {getStatusBadge(simulation)}
                         {simulation.combination_type !== "single" && (
                           <span className="ml-2 text-xs text-gray-500 capitalize">
                             {simulation.combination_type}
@@ -199,6 +231,43 @@ export default function SimulationsPage() {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       })}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {simulation.basic_results ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-green-600 font-medium">
+                              {simulation.basic_results.total_winners} wins
+                            </span>
+                            <span className="text-gray-400">•</span>
+                            <span className="text-blue-600">
+                              {simulation.basic_results.best_match_count} best
+                            </span>
+                          </div>
+                          <div
+                            className={`text-xs ${
+                              simulation.basic_results.total_payout >
+                              simulation.total_cost
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {simulation.basic_results.total_payout >
+                            simulation.total_cost
+                              ? `+KSh ${(
+                                  simulation.basic_results.total_payout -
+                                  simulation.total_cost
+                                ).toLocaleString()}`
+                              : `-KSh ${simulation.basic_results.net_loss.toLocaleString()}`}
+                          </div>
+                        </div>
+                      ) : simulation.enhanced_status === "results_available" ? (
+                        <span className="text-gray-400 italic">
+                          Click to view
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
