@@ -44,10 +44,10 @@ const SingleJackpotPage: React.FC = () => {
     );
   }
 
-  const metadata = jackpot.metadata || {};
-  const currency = metadata.currency || "KSH";
+  const currency = jackpot.metadata?.currency || "KSH";
   const isCompleted = jackpot.status === "completed";
-  const completedGamesCount = jackpot.games.filter(
+  const games = jackpot.games || [];
+  const completedGamesCount = games.filter(
     (game) =>
       game.score_home !== null &&
       game.score_home !== undefined &&
@@ -185,8 +185,8 @@ const SingleJackpotPage: React.FC = () => {
               >
                 {isCompleted ? "✓ Completed" : "⏳ In Progress"}
               </div>
-              {metadata.betting_status &&
-                getBettingStatusBadge(metadata.betting_status)}
+              {jackpot.metadata?.betting_status &&
+                getBettingStatusBadge(jackpot.metadata.betting_status)}
             </div>
           </div>
         </div>
@@ -241,52 +241,53 @@ const SingleJackpotPage: React.FC = () => {
         </div>
 
         {/* Prize Tiers */}
-        {metadata.prizes && Object.keys(metadata.prizes).length > 0 && (
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-8">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              Prize Tiers
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {Object.entries(metadata.prizes)
-                .sort(([a], [b]) => b.localeCompare(a))
-                .map(([tier, prize]) => {
-                  const betAmount = metadata.bet_amounts?.[tier];
-                  const isMainPrize = tier === "17/17";
+        {jackpot.metadata?.prizes &&
+          Object.keys(jackpot.metadata.prizes).length > 0 && (
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-8">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                Prize Tiers
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {Object.entries(jackpot.metadata.prizes)
+                  .sort(([a], [b]) => b.localeCompare(a))
+                  .map(([tier, prize]) => {
+                    const betAmount = jackpot.metadata?.bet_amounts?.[tier];
+                    const isMainPrize = tier === "17/17";
 
-                  return (
-                    <div
-                      key={tier}
-                      className={`p-4 rounded-xl border-2 transition ${
-                        isMainPrize
-                          ? "border-green-200 bg-green-50"
-                          : "border-gray-200 bg-gray-50 hover:border-blue-200"
-                      }`}
-                    >
+                    return (
                       <div
-                        className={`text-sm font-medium mb-1 ${
-                          isMainPrize ? "text-green-700" : "text-gray-600"
+                        key={tier}
+                        className={`p-4 rounded-xl border-2 transition ${
+                          isMainPrize
+                            ? "border-green-200 bg-green-50"
+                            : "border-gray-200 bg-gray-50 hover:border-blue-200"
                         }`}
                       >
-                        {tier} Matches {isMainPrize && "👑"}
-                      </div>
-                      <div
-                        className={`text-lg font-bold mb-1 whitespace-nowrap ${
-                          isMainPrize ? "text-green-800" : "text-gray-900"
-                        }`}
-                      >
-                        {formatCurrency(prize)}
-                      </div>
-                      {betAmount && (
-                        <div className="text-xs text-gray-500 whitespace-nowrap">
-                          Bet: {formatCurrency(betAmount)}
+                        <div
+                          className={`text-sm font-medium mb-1 ${
+                            isMainPrize ? "text-green-700" : "text-gray-600"
+                          }`}
+                        >
+                          {tier} Matches {isMainPrize && "👑"}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        <div
+                          className={`text-lg font-bold mb-1 whitespace-nowrap ${
+                            isMainPrize ? "text-green-800" : "text-gray-900"
+                          }`}
+                        >
+                          {formatCurrency(prize)}
+                        </div>
+                        {betAmount && (
+                          <div className="text-xs text-gray-500 whitespace-nowrap">
+                            Bet: {formatCurrency(betAmount)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Games Section */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
@@ -299,7 +300,7 @@ const SingleJackpotPage: React.FC = () => {
             </p>
           </div>
 
-          {jackpot.games.length === 0 ? (
+          {games.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               No games available for this jackpot.
             </div>
@@ -335,7 +336,7 @@ const SingleJackpotPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {jackpot.games.map((game: Game, index: number) => {
+                  {games.map((game: Game, index: number) => {
                     const hasScores =
                       game.score_home !== null &&
                       game.score_home !== undefined &&

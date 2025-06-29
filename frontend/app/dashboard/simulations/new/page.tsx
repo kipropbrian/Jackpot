@@ -2,19 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useSimulations } from "@/lib/hooks/use-simulations";
-import SimulationForm from "@/components/simulation/simulation-form";
+import NewSimulationForm from "@/components/simulation/new-simulation-form";
+import { SimulationCreate } from "@/lib/api/types";
 
 export default function NewSimulationPage() {
   const router = useRouter();
-  const { createSimulation, createError, isCreating } = useSimulations();
+  const { createSimulation, createError } = useSimulations();
 
-  // Handler for SimulationForm
-  const handleSimulationSubmit = async (values: {
-    name: string;
-    total_combinations: number;
-    cost_per_bet: number;
-    jackpot_id: string;
-  }) => {
+  // Handler for NewSimulationForm
+  const handleSimulationSubmit = async (values: SimulationCreate) => {
     try {
       console.log("Creating simulation with values:", values);
       const newSimulation = await createSimulation(values);
@@ -35,9 +31,8 @@ export default function NewSimulationPage() {
             Create New Simulation
           </h1>
           <p className="mt-2 text-base text-gray-600">
-            Set up parameters for your jackpot simulation. Choose a jackpot and
-            define your betting strategy.
-            {/* Admin note will be shown by useIsAdmin hook if applicable */}
+            Create a simulation using SportPesa rules with either budget-based
+            or interactive selection.
           </p>
         </div>
 
@@ -70,66 +65,17 @@ export default function NewSimulationPage() {
 
         {/* Simulation Form */}
         <div className="mb-6">
-          <SimulationForm onSubmit={handleSimulationSubmit} />
+          <NewSimulationForm onSubmit={handleSimulationSubmit} />
         </div>
 
         {/* Cancel Button */}
-        <div className="flex justify-end mb-6">
+        <div className="flex justify-center">
           <button
-            type="button"
-            onClick={() => router.back()}
-            className="bg-white py-3 px-6 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
-            disabled={isCreating}
+            onClick={() => router.push("/dashboard/simulations")}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            ← Cancel & Go Back
+            Cancel
           </button>
-        </div>
-
-        {/* Information Section */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            How Simulations Work
-          </h3>
-          <div className="text-sm text-gray-600">
-            <p className="mb-4">
-              After creating a simulation, our system will:
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <ol className="list-decimal list-inside space-y-2">
-                <li>
-                  Generate the specified number of random bet combinations for
-                  your selected jackpot
-                </li>
-                <li>
-                  Simulate each combination against the actual jackpot results
-                  (when available)
-                </li>
-                <li>
-                  Calculate win/loss statistics, total payouts, and expected
-                  returns
-                </li>
-              </ol>
-              <ol className="list-decimal list-inside space-y-2" start={4}>
-                <li>
-                  Provide detailed analysis including match distribution and
-                  profitability metrics
-                </li>
-                <li>
-                  Show you the best performing combinations and overall
-                  simulation performance
-                </li>
-              </ol>
-            </div>
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-800 text-sm">
-                <strong>Note:</strong> Simulations for open jackpots will be
-                processed once the jackpot closes and results are available.
-                Simulations for completed jackpots (admin only) will be analyzed
-                immediately. You can track the progress of your simulation in
-                the simulations dashboard.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

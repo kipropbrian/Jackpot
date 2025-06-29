@@ -266,8 +266,8 @@ export default function ProfilePage() {
           {!emailNotifications && (
             <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md">
               <p>
-                Email notifications are disabled. You won't receive emails when
-                your simulations complete.
+                Email notifications are disabled. You won&apos;t receive emails
+                when your simulations complete.
               </p>
             </div>
           )}

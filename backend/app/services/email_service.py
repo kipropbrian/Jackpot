@@ -1,6 +1,6 @@
 """Email service using Resend for sending notifications."""
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import resend
 from app.config.settings import RESEND_API_KEY, EMAIL_FROM, FRONTEND_URL
 from app.config.database import supabase
@@ -42,9 +42,10 @@ class EmailService:
         win_rate: float,
         total_payout: float,
         best_match_count: int,
-        actual_results: list
+        actual_results: list,
+        prize_breakdown: List[Dict[str, Any]]
     ) -> str:
-        """Create HTML email template for simulation completion."""
+        """Create HTML email template for simulation completion with prize breakdown."""
         
         # Create results link
         results_url = f"{FRONTEND_URL}/dashboard/simulations/{simulation_id}"
@@ -52,13 +53,48 @@ class EmailService:
         # Format payout
         formatted_payout = f"KSh {total_payout:,.0f}" if total_payout > 0 else "KSh 0"
         
-        # Create match summary
+        # Create match summary with prize context
         if winning_combinations > 0:
             status_color = "#16a34a"  # green
-            status_text = f"🎉 Congratulations! You had {winning_combinations:,} winning combination{'s' if winning_combinations != 1 else ''}!"
+            status_text = f"🎉 Congratulations! You had {winning_combinations:,} winning combination{'s' if winning_combinations != 1 else ''} across different prize levels!"
         else:
             status_color = "#dc2626"  # red
             status_text = f"No winning combinations this time, but your best match was {best_match_count} out of {len(actual_results)} games."
+        
+        # Create prize breakdown section HTML
+        prize_breakdown_html = ""
+        if prize_breakdown and len(prize_breakdown) > 0:
+            prize_breakdown_html = """
+                    <!-- Prize Breakdown -->
+                    <div style="background-color: #fefefe; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">Prize Level Breakdown</h3>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                                <thead>
+                                    <tr style="background-color: #f8fafc;">
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; font-weight: 600;">Prize Level</th>
+                                        <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 600;">Winners</th>
+                                        <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 600;">Total Payout</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            """
+            
+            for prize in prize_breakdown:
+                prize_breakdown_html += f"""
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 8px; font-weight: 500;">{prize['level']}</td>
+                                        <td style="padding: 8px; text-align: right; color: #16a34a; font-weight: 600;">{prize['winning_combinations']:,}</td>
+                                        <td style="padding: 8px; text-align: right; color: #16a34a; font-weight: 600;">KSh {prize['total_payout']:,.0f}</td>
+                                    </tr>
+                """
+            
+            prize_breakdown_html += """
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+            """
         
         html_content = f"""
         <!DOCTYPE html>
@@ -82,7 +118,7 @@ class EmailService:
                     <p style="margin: 0 0 20px 0; font-size: 16px;">Hi {user_name},</p>
                     
                     <p style="margin: 0 0 25px 0; font-size: 16px;">
-                        Your simulation <strong>"{simulation_name}"</strong> has finished analyzing all combinations.
+                        Your simulation <strong>"{simulation_name}"</strong> has finished analyzing all combinations against the actual Mega Jackpot Pro results.
                     </p>
                     
                     <!-- Status Banner -->
@@ -92,7 +128,7 @@ class EmailService:
                     
                     <!-- Results Summary -->
                     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">Results Summary</h3>
+                        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">Overall Summary</h3>
                         
                         <div style="display: grid; gap: 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
@@ -101,45 +137,50 @@ class EmailService:
                             </div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                <span style="font-weight: 500;">Winning Combinations:</span>
+                                <span style="font-weight: 500;">Total Winning Combinations:</span>
                                 <span style="font-weight: 600; color: #16a34a;">{winning_combinations:,}</span>
                             </div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                <span style="font-weight: 500;">Win Rate:</span>
+                                <span style="font-weight: 500;">Overall Win Rate:</span>
                                 <span style="font-weight: 600; color: #1f2937;">{win_rate:.2f}%</span>
                             </div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                <span style="font-weight: 500;">Total Winnings:</span>
-                                <span style="font-weight: 600; color: #16a34a;">{formatted_payout}</span>
+                                <span style="font-weight: 500;">Total Prize Winnings:</span>
+                                <span style="font-weight: 600; color: #16a34a; font-size: 18px;">{formatted_payout}</span>
                             </div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
-                                <span style="font-weight: 500;">Best Match:</span>
+                                <span style="font-weight: 500;">Best Match Count:</span>
                                 <span style="font-weight: 600; color: #1f2937;">{best_match_count}/{len(actual_results)} games</span>
                             </div>
                         </div>
                     </div>
                     
+                    {prize_breakdown_html}
+                    
                     <!-- Actual Results -->
                     <div style="background-color: #fefefe; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">Actual Results</h3>
+                        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">Actual Jackpot Results</h3>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                             {' '.join([f'<span style="background-color: #8b5cf6; color: white; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-weight: 600; font-size: 14px;">{result}</span>' for result in actual_results])}
                         </div>
+                        <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280; font-style: italic;">
+                            1 = Home Win, X = Draw, 2 = Away Win
+                        </p>
                     </div>
                     
                     <!-- CTA Button -->
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="{results_url}" 
                            style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                            View Detailed Results
+                            View Detailed Analysis
                         </a>
                     </div>
                     
                     <p style="margin: 30px 0 0 0; font-size: 14px; color: #6b7280;">
-                        Thanks for using Jackpot! Good luck with your next simulation.
+                        Thanks for using Jackpot! The detailed analysis includes combination previews, profitability metrics, and more insights.
                     </p>
                 </div>
                 
@@ -167,9 +208,10 @@ class EmailService:
         win_rate: float,
         total_payout: float,
         best_match_count: int,
-        actual_results: list
+        actual_results: list,
+        prize_breakdown: List[Dict[str, Any]]
     ) -> bool:
-        """Send simulation completion email to user."""
+        """Send simulation completion email to user with prize level breakdown."""
         
         if not RESEND_API_KEY:
             logger.warning("RESEND_API_KEY not configured - skipping email notification")
@@ -196,7 +238,7 @@ class EmailService:
             # Get user name (fallback to email if no name)
             user_name = user_prefs.get("full_name") or user_email.split("@")[0]
             
-            # Create email content
+            # Create email content with prize breakdown
             html_content = EmailService._create_simulation_completion_email_html(
                 user_name=user_name,
                 simulation_name=simulation_name,
@@ -206,14 +248,20 @@ class EmailService:
                 win_rate=win_rate,
                 total_payout=total_payout,
                 best_match_count=best_match_count,
-                actual_results=actual_results
+                actual_results=actual_results,
+                prize_breakdown=prize_breakdown
             )
+            
+            # Create subject with prize info
+            subject = f"🎯 Analysis Complete: {simulation_name}"
+            if winning_combinations > 0 and total_payout > 0:
+                subject = f"🎉 Analysis Complete: {simulation_name} - KSh {total_payout:,.0f} Won!"
             
             # Send email via Resend
             params = {
                 "from": EMAIL_FROM,
                 "to": [user_email],
-                "subject": f"🎯 Analysis Complete: {simulation_name}",
+                "subject": subject,
                 "html": html_content,
             }
             

@@ -34,7 +34,7 @@ export function useNotificationMutations() {
       // Invalidate and refetch notifications
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
       toast.error(
         error.response?.data?.detail || "Failed to mark notification as read"
       );
@@ -48,7 +48,7 @@ export function useNotificationMutations() {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       toast.success("All notifications marked as read");
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
       toast.error(
         error.response?.data?.detail ||
           "Failed to mark all notifications as read"

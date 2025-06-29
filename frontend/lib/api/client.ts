@@ -1,4 +1,8 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, {
+  AxiosInstance,
+  InternalAxiosRequestConfig,
+  AxiosResponse,
+} from "axios";
 import { supabase } from "../supabase/client";
 
 // Create an Axios instance with default config
@@ -11,7 +15,7 @@ const apiClient: AxiosInstance = axios.create({
 
 // Request interceptor to add auth token to requests
 apiClient.interceptors.request.use(
-  async (config: AxiosRequestConfig) => {
+  async (config: InternalAxiosRequestConfig) => {
     try {
       const { data } = await supabase.auth.getSession();
       const session = data.session;

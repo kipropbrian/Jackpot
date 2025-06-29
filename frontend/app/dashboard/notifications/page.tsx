@@ -106,8 +106,8 @@ export default function NotificationsPage() {
               No notifications yet
             </h3>
             <p className="text-gray-500 mb-4">
-              You'll receive notifications when your simulations complete or
-              encounter issues.
+              You&apos;ll receive notifications when your simulations complete
+              or encounter issues.
             </p>
             <Link
               href="/dashboard/simulations/new"
@@ -155,17 +155,20 @@ export default function NotificationsPage() {
                   <p className="mt-1 text-sm text-gray-600">
                     {notification.message}
                   </p>
-                  {notification.data?.simulation_id && (
-                    <div className="mt-3">
-                      <Link
-                        href={`/dashboard/simulations/${notification.data.simulation_id}`}
-                        className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        View simulation details →
-                      </Link>
-                    </div>
-                  )}
+                  {(() => {
+                    const simulationId = notification.data?.simulation_id;
+                    return simulationId && typeof simulationId === "string" ? (
+                      <div className="mt-3">
+                        <Link
+                          href={`/dashboard/simulations/${simulationId}`}
+                          className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          View simulation details →
+                        </Link>
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               </div>
             </div>

@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import { useUsers, useUpdateUser } from "@/lib/hooks/use-admin";
-import { UserFilters } from "@/lib/api/services/admin-service";
+import {
+  UserFilters,
+  UserProfile,
+  UserUpdateRequest,
+} from "@/lib/api/services/admin-service";
 
 export default function UsersManagement() {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<UserFilters>({});
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const { data: usersData, isLoading, error } = useUsers(page, 10, filters);
@@ -31,12 +35,12 @@ export default function UsersManagement() {
     setPage(1);
   };
 
-  const handleEditUser = (user: any) => {
+  const handleEditUser = (user: UserProfile) => {
     setSelectedUser(user);
     setShowEditModal(true);
   };
 
-  const handleUpdateUser = async (userData: any) => {
+  const handleUpdateUser = async (userData: UserUpdateRequest) => {
     if (!selectedUser) return;
 
     try {

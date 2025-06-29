@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
 import { useIsAdmin } from "@/lib/hooks/use-admin";
-import { Jackpot } from "@/lib/api/types";
+import { Jackpot, Simulation } from "@/lib/api/types";
 
 export interface SimulationFormValues {
   name: string;
@@ -72,7 +72,8 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
     // Count today's simulations for this user
     const todayISO = today.toISOString().slice(0, 10);
     const todaysCount = simulations.filter(
-      (sim) => sim.created_at && sim.created_at.slice(0, 10) === todayISO
+      (sim: Simulation) =>
+        sim.created_at && sim.created_at.slice(0, 10) === todayISO
     ).length;
 
     const sequenceNumber = (todaysCount + 1).toString().padStart(2, "0");

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
+import { Simulation, Jackpot } from "@/lib/api/types";
 
 export default function DashboardPage() {
   const { simulations, isLoading: isSimulationsLoading } = useSimulations();
@@ -12,11 +13,13 @@ export default function DashboardPage() {
     if (!jackpots || jackpots.length === 0) return null;
 
     // First, try to find an active jackpot (status: "open")
-    const activeJackpot = jackpots.find((jackpot) => jackpot.status === "open");
+    const activeJackpot = jackpots.find(
+      (jackpot: Jackpot) => jackpot.status === "open"
+    );
     if (activeJackpot) return activeJackpot;
 
     // If no active jackpot, return the latest one (most recent scraped_at)
-    return jackpots.reduce((latest, current) => {
+    return jackpots.reduce((latest: Jackpot, current: Jackpot) => {
       const latestDate = new Date(latest.scraped_at);
       const currentDate = new Date(current.scraped_at);
       return currentDate > latestDate ? current : latest;
@@ -43,21 +46,21 @@ export default function DashboardPage() {
     }
 
     const completedSims = simulations.filter(
-      (sim) => sim.status === "completed"
+      (sim: Simulation) => sim.status === "completed"
     );
     const runningSims = simulations.filter(
-      (sim) => sim.status === "running" || sim.status === "pending"
+      (sim: Simulation) => sim.status === "running" || sim.status === "pending"
     );
     const totalSpent = simulations.reduce(
-      (sum, sim) => sum + (sim.total_cost || 0),
+      (sum: number, sim: Simulation) => sum + (sim.total_cost || 0),
       0
     );
     const totalWon = completedSims.reduce(
-      (sum, sim) => sum + (sim.results?.total_payout || 0),
+      (sum: number, sim: Simulation) => sum + (sim.results?.total_payout || 0),
       0
     );
     const winRates = completedSims.map(
-      (sim) => sim.results?.winning_percentage || 0
+      (sim: Simulation) => sim.results?.analysis?.winning_percentage || 0
     );
 
     return {
@@ -67,27 +70,25 @@ export default function DashboardPage() {
       totalSpent,
       totalWon,
       averageWinRate: winRates.length
-        ? winRates.reduce((a, b) => a + b, 0) / winRates.length
+        ? winRates.reduce((a: number, b: number) => a + b, 0) / winRates.length
         : 0,
       bestWinRate: winRates.length ? Math.max(...winRates) : 0,
       totalCombinations: completedSims.reduce(
-        (sum, sim) => sum + (sim.total_combinations || 0),
+        (sum: number, sim: Simulation) =>
+          sum + (sim.effective_combinations || 0),
         0
       ),
       winningCombinations: completedSims.reduce(
-        (sum, sim) => sum + (sim.results?.total_winning_combinations || 0),
+        (sum: number, sim: Simulation) =>
+          sum + (sim.results?.total_winners || 0),
         0
       ),
-      winningPercentage: completedSims.length
-        ? completedSims.reduce(
-            (sum, sim) => sum + (sim.results?.winning_percentage || 0),
-            0
-          ) / completedSims.length
-        : 0,
+      winningPercentage: 0, // Will be calculated when we have analysis data
       totalPayout: totalWon,
       netLoss: totalSpent - totalWon,
       bestMatchCount: completedSims.reduce(
-        (max, sim) => Math.max(max, sim.results?.best_match_count || 0),
+        (max: number, sim: Simulation) =>
+          Math.max(max, sim.results?.best_match_count || 0),
         0
       ),
     };

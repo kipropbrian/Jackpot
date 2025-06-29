@@ -1,6 +1,5 @@
 import apiClient from "../client";
 import { API_ENDPOINTS } from "../endpoints";
-import { PaginatedResponse } from "../types";
 
 // Types for admin functionality
 export interface UserProfile {
@@ -11,14 +10,14 @@ export interface UserProfile {
   is_active: boolean;
   last_login?: string;
   created_at: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UserUpdateRequest {
   full_name?: string;
   role?: string;
   is_active?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UserStats {
@@ -52,11 +51,13 @@ export interface AdminSimulation {
   user_email?: string;
   user_name?: string;
   name: string;
-  total_combinations: number;
-  cost_per_bet: number;
+  jackpot_id: string;
+  combination_type: "single" | "double" | "triple" | "mixed";
+  double_count: number;
+  triple_count: number;
+  effective_combinations: number;
   total_cost: number;
-  status: string;
-  progress: number;
+  status: "pending" | "running" | "completed" | "failed";
   created_at: string;
   completed_at?: string;
 }
@@ -72,13 +73,21 @@ export interface SimulationFilters {
   user_email?: string;
 }
 
+export interface AdminPaginatedResponse<T> {
+  data: T[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export const adminService = {
   // User management
   async getUsers(
     page: number = 1,
     pageSize: number = 10,
     filters: UserFilters = {}
-  ): Promise<PaginatedResponse<UserProfile>> {
+  ): Promise<AdminPaginatedResponse<UserProfile>> {
     const params = new URLSearchParams({
       page: page.toString(),
       page_size: pageSize.toString(),
@@ -93,11 +102,11 @@ export const adminService = {
       `${API_ENDPOINTS.ADMIN_USERS}?${params}`
     );
     return {
-      data: response.data.users,
-      total_count: response.data.total_count,
-      page: response.data.page,
-      page_size: response.data.page_size,
-      total_pages: response.data.total_pages,
+      data: response.data.users || [],
+      total_count: response.data.total_count || 0,
+      page: response.data.page || page,
+      page_size: response.data.page_size || pageSize,
+      total_pages: response.data.total_pages || 1,
     };
   },
 
@@ -128,7 +137,7 @@ export const adminService = {
     page: number = 1,
     pageSize: number = 10,
     filters: SimulationFilters = {}
-  ): Promise<PaginatedResponse<AdminSimulation>> {
+  ): Promise<AdminPaginatedResponse<AdminSimulation>> {
     const params = new URLSearchParams({
       page: page.toString(),
       page_size: pageSize.toString(),
@@ -141,11 +150,11 @@ export const adminService = {
       `${API_ENDPOINTS.ADMIN_SIMULATIONS}?${params}`
     );
     return {
-      data: response.data.simulations,
-      total_count: response.data.total_count,
-      page: response.data.page,
-      page_size: response.data.page_size,
-      total_pages: response.data.total_pages,
+      data: response.data.simulations || [],
+      total_count: response.data.total_count || 0,
+      page: response.data.page || page,
+      page_size: response.data.page_size || pageSize,
+      total_pages: response.data.total_pages || 1,
     };
   },
 

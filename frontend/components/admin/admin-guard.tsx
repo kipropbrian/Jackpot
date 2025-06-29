@@ -56,8 +56,8 @@ export default function AdminGuard({ children }: AdminGuardProps) {
             Access Denied
           </h1>
           <p className="text-gray-600 mb-4">
-            You don't have permission to access this area. Only superadmins can
-            access the admin panel.
+            You don&apos;t have permission to access this area. Only superadmins
+            can access the admin panel.
           </p>
           <p className="text-sm text-gray-500 mb-4">
             Current role: {profile?.role || "No role assigned"}

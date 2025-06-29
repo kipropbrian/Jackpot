@@ -85,7 +85,7 @@ export default function SimulationsPage() {
 
       {error && (
         <div className="border-t border-gray-200 px-4 py-3 bg-red-50 text-red-700">
-          Error loading simulations: {error.message}
+          Error loading simulations: {error}
         </div>
       )}
 
@@ -119,7 +119,7 @@ export default function SimulationsPage() {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                   >
-                    Total Combinations
+                    Effective Combinations
                   </th>
                   <th
                     scope="col"
@@ -148,9 +148,9 @@ export default function SimulationsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {getStatusBadge(simulation.status)}
-                        {simulation.status === "running" && (
-                          <span className="ml-2 text-xs text-gray-500">
-                            {simulation.progress}%
+                        {simulation.combination_type !== "single" && (
+                          <span className="ml-2 text-xs text-gray-500 capitalize">
+                            {simulation.combination_type}
                           </span>
                         )}
                       </div>
@@ -159,7 +159,7 @@ export default function SimulationsPage() {
                       {formatDate(simulation.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {simulation.total_combinations.toLocaleString()}
+                      {simulation.effective_combinations.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       KSh{" "}

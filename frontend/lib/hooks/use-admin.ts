@@ -3,11 +3,9 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "./use-auth";
 import {
   adminService,
-  UserProfile,
   UserUpdateRequest,
   UserFilters,
   SimulationFilters,
-  SystemStats,
 } from "../api/services/admin-service";
 
 // Query keys
@@ -36,7 +34,6 @@ export function useUsers(
   return useQuery({
     queryKey: adminKeys.usersList(page, pageSize, filters),
     queryFn: () => adminService.getUsers(page, pageSize, filters),
-    keepPreviousData: true,
   });
 }
 
@@ -67,7 +64,7 @@ export function useUpdateUser() {
 
       toast.success("User updated successfully");
     },
-    onError: (error: any) => {
+    onError: (error: Error & { response?: { data?: { detail?: string } } }) => {
       toast.error(error.response?.data?.detail || "Failed to update user");
     },
   });
@@ -91,7 +88,7 @@ export function useAllSimulations(
   return useQuery({
     queryKey: adminKeys.simulationsList(page, pageSize, filters),
     queryFn: () => adminService.getAllSimulations(page, pageSize, filters),
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
   });
 }
 

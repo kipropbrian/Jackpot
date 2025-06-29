@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useAllSimulations } from "@/lib/hooks/use-admin";
-import { SimulationFilters } from "@/lib/api/services/admin-service";
+import {
+  SimulationFilters,
+  AdminSimulation,
+  AdminPaginatedResponse,
+} from "@/lib/api/services/admin-service";
 import Link from "next/link";
 
 export default function SimulationsManagement() {
@@ -14,6 +18,16 @@ export default function SimulationsManagement() {
     isLoading,
     error,
   } = useAllSimulations(page, 10, filters);
+
+  // Provide fallback values to prevent type errors
+  const safeSimulationsData: AdminPaginatedResponse<AdminSimulation> =
+    (simulationsData as AdminPaginatedResponse<AdminSimulation>) || {
+      data: [],
+      total_count: 0,
+      page: 1,
+      page_size: 10,
+      total_pages: 1,
+    };
 
   const handleStatusFilter = (status: string) => {
     setFilters({ ...filters, status: status === "all" ? undefined : status });
@@ -117,25 +131,25 @@ export default function SimulationsManagement() {
             Total Simulations
           </div>
           <div className="text-2xl font-bold text-gray-900">
-            {simulationsData?.total_count || 0}
+            {safeSimulationsData.total_count}
           </div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm font-medium text-gray-500">This Page</div>
           <div className="text-2xl font-bold text-gray-900">
-            {simulationsData?.data?.length || 0}
+            {safeSimulationsData.data.length}
           </div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm font-medium text-gray-500">Current Page</div>
           <div className="text-2xl font-bold text-gray-900">
-            {simulationsData?.page || 1}
+            {safeSimulationsData.page}
           </div>
         </div>
         <div className="bg-white p-4 rounded-lg shadow">
           <div className="text-sm font-medium text-gray-500">Total Pages</div>
           <div className="text-2xl font-bold text-gray-900">
-            {simulationsData?.total_pages || 1}
+            {safeSimulationsData.total_pages}
           </div>
         </div>
       </div>
@@ -143,7 +157,7 @@ export default function SimulationsManagement() {
       {/* Simulations Table */}
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
-          {simulationsData?.data?.map((simulation) => (
+          {safeSimulationsData.data.map((simulation: AdminSimulation) => (
             <li key={simulation.id} className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
@@ -173,7 +187,8 @@ export default function SimulationsManagement() {
                         KSH {simulation.total_cost.toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500">
-                        {simulation.total_combinations.toLocaleString()}{" "}
+                        {simulation.effective_combinations?.toLocaleString() ||
+                          0}{" "}
                         combinations
                       </div>
                     </div>
@@ -198,13 +213,10 @@ export default function SimulationsManagement() {
                     {simulation.status === "running" && (
                       <div className="flex items-center">
                         <div className="text-sm text-gray-500 mr-2">
-                          Progress: {simulation.progress}%
+                          Status: Running
                         </div>
                         <div className="w-20 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${simulation.progress}%` }}
-                          ></div>
+                          <div className="bg-blue-600 h-2 rounded-full animate-pulse w-full"></div>
                         </div>
                       </div>
                     )}
@@ -226,13 +238,13 @@ export default function SimulationsManagement() {
       </div>
 
       {/* Pagination */}
-      {simulationsData && simulationsData.total_pages > 1 && (
+      {safeSimulationsData.total_pages > 1 && (
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             <p className="text-sm text-gray-700">
-              Showing page {simulationsData.page} of{" "}
-              {simulationsData.total_pages} ({simulationsData.total_count} total
-              simulations)
+              Showing page {safeSimulationsData.page} of{" "}
+              {safeSimulationsData.total_pages} (
+              {safeSimulationsData.total_count} total simulations)
             </p>
           </div>
           <div className="flex space-x-2">
@@ -245,7 +257,7 @@ export default function SimulationsManagement() {
             </button>
             <button
               onClick={() => setPage(page + 1)}
-              disabled={page >= simulationsData.total_pages}
+              disabled={page >= safeSimulationsData.total_pages}
               className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
@@ -255,7 +267,7 @@ export default function SimulationsManagement() {
       )}
 
       {/* Empty State */}
-      {simulationsData?.data?.length === 0 && (
+      {safeSimulationsData.data.length === 0 && (
         <div className="text-center py-12">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"

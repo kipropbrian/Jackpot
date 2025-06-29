@@ -1,11 +1,11 @@
-import apiClient from '../client';
-import { API_ENDPOINTS } from '../endpoints';
-import { 
-  Simulation, 
-  SimulationCreate, 
-  SimulationUpdate, 
-  SimulationListResponse 
-} from '../types';
+import apiClient from "../client";
+import { API_ENDPOINTS } from "../endpoints";
+import {
+  Simulation,
+  SimulationCreate,
+  SimulationUpdate,
+  SimulationListResponse,
+} from "../types";
 
 export const SimulationService = {
   /**
@@ -19,10 +19,13 @@ export const SimulationService = {
   /**
    * Get a list of simulations with pagination
    */
-  getSimulations: async (page: number = 1, limit: number = 10): Promise<SimulationListResponse> => {
+  getSimulations: async (
+    page: number = 1,
+    limit: number = 10
+  ): Promise<SimulationListResponse> => {
     const skip = (page - 1) * limit;
     const response = await apiClient.get(API_ENDPOINTS.SIMULATIONS, {
-      params: { skip, limit }
+      params: { skip, limit },
     });
     return response.data;
   },
@@ -38,7 +41,10 @@ export const SimulationService = {
   /**
    * Update a simulation
    */
-  updateSimulation: async (id: string, data: SimulationUpdate): Promise<Simulation> => {
+  updateSimulation: async (
+    id: string,
+    data: SimulationUpdate
+  ): Promise<Simulation> => {
     const response = await apiClient.patch(API_ENDPOINTS.SIMULATION(id), data);
     return response.data;
   },
@@ -48,5 +54,15 @@ export const SimulationService = {
    */
   deleteSimulation: async (id: string): Promise<void> => {
     await apiClient.delete(API_ENDPOINTS.SIMULATION(id));
-  }
+  },
+
+  /**
+   * Analyze a completed simulation
+   */
+  analyzeSimulation: async (
+    id: string
+  ): Promise<{ message: string; simulation_id: string }> => {
+    const response = await apiClient.post(API_ENDPOINTS.ANALYZE_SIMULATION(id));
+    return response.data;
+  },
 };
