@@ -1,7 +1,7 @@
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from decimal import Decimal
 
 class SimulationBase(BaseModel):
@@ -9,19 +9,47 @@ class SimulationBase(BaseModel):
     name: str
     jackpot_id: str
 
-class SimulationCreate(BaseModel):
-    """Schema for creating a new simulation with specification-based approach"""
-    name: str
-    jackpot_id: str
+class SimulationCreate(SimulationBase):
+    """Schema for creating a new simulation"""
+    # Method 1: Budget-based creation
+    budget_ksh: Optional[Decimal] = None
     
-    # Option 1: Budget-based creation
-    budget_ksh: Optional[float] = None
-    
-    # Option 2: Explicit game selections
+    # Method 2: Explicit game selections
     game_selections: Optional[Dict[str, List[str]]] = None
 
-class BetSpecification(BaseModel):
-    """Schema for bet specification"""
+class SimulationUpdate(BaseModel):
+    """Schema for updating an existing simulation"""
+    name: Optional[str] = None
+    jackpot_id: Optional[str] = None
+    budget_ksh: Optional[Decimal] = None
+    game_selections: Optional[Dict[str, List[str]]] = None
+
+class SimulationResponse(BaseModel):
+    """Schema for simulation response"""
+    id: UUID
+    user_id: UUID
+    name: str
+    jackpot_id: UUID
+    combination_type: str
+    double_count: int
+    triple_count: int
+    effective_combinations: int
+    total_cost: Decimal
+    status: str
+    created_at: datetime
+    completed_at: Optional[datetime]
+    results: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+class SimulationListResponse(BaseModel):
+    """Schema for paginated simulations list response"""
+    simulations: List[SimulationResponse]
+    total: int
+
+class BetSpecificationResponse(BaseModel):
+    """Schema for bet specification response"""
     id: UUID
     simulation_id: UUID
     game_selections: Dict[str, List[str]]
@@ -31,35 +59,32 @@ class BetSpecification(BaseModel):
     total_combinations: int
     total_cost: Decimal
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
 
-class SimulationResponse(BaseModel):
-    """Schema for simulation response with new specification-based fields"""
-    id: UUID
-    user_id: UUID
-    name: str
-    jackpot_id: UUID
-    
-    # Specification-based fields
-    combination_type: str = "single"
-    double_count: int = 0
-    triple_count: int = 0
-    effective_combinations: int = 1
-    
-    total_cost: Decimal
-    status: str
-    created_at: datetime
-    completed_at: Optional[datetime] = None
-    results: Optional[Dict[str, Any]] = None
-    
     class Config:
         from_attributes = True
 
 class SimulationWithSpecification(SimulationResponse):
-    """Extended simulation response with bet specification"""
-    specification: Optional[BetSpecification] = None
+    """Schema for simulation with its bet specification"""
+    specification: Optional[BetSpecificationResponse] = None
+
+class GameSelectionValidationRequest(BaseModel):
+    """Schema for validating game selections"""
+    game_selections: Dict[str, List[str]]
+
+class GameSelectionValidationResponse(BaseModel):
+    """Schema for game selection validation response"""
+    game_selections: Dict[str, List[str]]
+    is_valid: bool
+    errors: List[str]
+    total_combinations: int
+    total_cost: Decimal
+    combination_type: str
+    double_count: int
+    triple_count: int
+
+class SimulationAnalysisRequest(BaseModel):
+    """Schema for requesting simulation analysis"""
+    simulation_id: UUID
 
 class PrizeBreakdown(BaseModel):
     """Schema for individual prize level breakdown"""
@@ -78,10 +103,6 @@ class CombinationPreview(BaseModel):
     prize_level: Optional[str] = None
     payout: Decimal = 0.0
 
-class SimulationAnalysisRequest(BaseModel):
-    """Schema for requesting simulation analysis"""
-    simulation_id: UUID
-    
 class SimulationAnalysisResponse(BaseModel):
     """Schema for analysis response with prize level tracking"""
     simulation_id: UUID
@@ -96,17 +117,6 @@ class SimulationAnalysisResponse(BaseModel):
     
     class Config:
         from_attributes = True
-
-class GameSelectionValidation(BaseModel):
-    """Schema for validating game selections"""
-    game_selections: Dict[str, List[str]]
-    is_valid: bool
-    errors: List[str]
-    total_combinations: int
-    total_cost: Decimal
-    combination_type: str
-    double_count: int
-    triple_count: int
 
 class SportPesaRules(BaseModel):
     """Schema for SportPesa betting rules"""

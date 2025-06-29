@@ -5,10 +5,12 @@ from app.schemas.simulation import (
     SimulationCreate,
     SimulationResponse,
     SimulationWithSpecification,
-    BetSpecification,
+    BetSpecificationResponse,
     CombinationPreview,
-    GameSelectionValidation,
-    SportPesaRules
+    GameSelectionValidationRequest,
+    GameSelectionValidationResponse,
+    SportPesaRules,
+    SimulationListResponse
 )
 from app.config.database import supabase
 from app.api.deps import get_current_user
@@ -90,7 +92,7 @@ async def create_simulation(
             detail=f"Failed to create simulation: {str(e)}"
         )
 
-@router.get("/", response_model=List[SimulationResponse])
+@router.get("/", response_model=SimulationListResponse)
 async def get_simulations(
     current_user: dict = Depends(get_current_user),
     limit: int = Query(50, ge=1, le=100),
@@ -98,16 +100,23 @@ async def get_simulations(
 ):
     """Get all simulations for the current user with pagination."""
     try:
+        # Get simulations with count
         response = (
             supabase.table("simulations")
-            .select("*")
+            .select("*", count="exact")
             .eq("user_id", current_user["id"])
             .order("created_at", desc=True)
             .range(offset, offset + limit - 1)
             .execute()
         )
         
-        return response.data or []
+        simulations = response.data or []
+        total_count = response.count or 0
+        
+        return SimulationListResponse(
+            simulations=simulations,
+            total=total_count
+        )
         
     except Exception as e:
         raise HTTPException(
@@ -306,38 +315,42 @@ async def get_combination_preview(
             detail=f"Failed to get combination preview: {str(e)}"
         )
 
-@router.post("/validate-selections", response_model=GameSelectionValidation)
+@router.post("/validate-selections", response_model=GameSelectionValidationResponse)
 async def validate_game_selections(
     game_selections: dict,
     jackpot_id: str
 ):
-    """Validate game selections against SportPesa rules."""
+    """Validate game selections and calculate combinations/cost"""
     try:
-        # Create temporary generator to validate
-        temp_generator = CombinationSpecificationGenerator("temp", jackpot_id)
+        # Create temporary specification generator for validation
+        temp_generator = CombinationSpecificationGenerator(
+            simulation_id="temp_validation",
+            jackpot_id=jackpot_id
+        )
         
         try:
+            # Attempt to create specification from selections
             specification = temp_generator.create_specification_from_selections(game_selections)
             
-            return GameSelectionValidation(
+            return GameSelectionValidationResponse(
                 game_selections=game_selections,
                 is_valid=True,
                 errors=[],
                 total_combinations=specification["total_combinations"],
-                total_cost=specification["total_cost"],
+                total_cost=float(specification["total_cost"]),
                 combination_type=specification["combination_type"],
                 double_count=len(specification["double_games"]),
                 triple_count=len(specification["triple_games"])
             )
             
         except ValueError as ve:
-            return GameSelectionValidation(
+            return GameSelectionValidationResponse(
                 game_selections=game_selections,
                 is_valid=False,
                 errors=[str(ve)],
                 total_combinations=0,
-                total_cost=0,
-                combination_type="invalid",
+                total_cost=0.0,
+                combination_type="single",
                 double_count=0,
                 triple_count=0
             )

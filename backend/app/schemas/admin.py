@@ -68,11 +68,13 @@ class AdminSimulationResponse(BaseModel):
     user_email: Optional[str]
     user_name: Optional[str]
     name: str
-    total_combinations: int
-    cost_per_bet: Decimal
+    jackpot_id: UUID
+    combination_type: str
+    double_count: int
+    triple_count: int
+    effective_combinations: int
     total_cost: Decimal
     status: str
-    progress: int
     created_at: datetime
     completed_at: Optional[datetime]
 
