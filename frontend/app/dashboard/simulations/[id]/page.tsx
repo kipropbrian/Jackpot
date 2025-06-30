@@ -16,7 +16,7 @@ export default function SimulationDetailsPage({
   params: { id: string };
 }) {
   const router = useRouter();
-  const { simulation, loading, error, refetch } = useSimulation(params.id);
+  const { simulation, loading, error } = useSimulation(params.id);
   const { jackpot, loading: jackpotLoading } = useJackpot(
     simulation?.jackpot_id
   );
@@ -167,7 +167,9 @@ export default function SimulationDetailsPage({
       </div>
 
       {/* Analysis Results - MOVED TO THE TOP */}
-      {simulation.results && <SimulationResults simulation={simulation} />}
+      {simulation.results && (
+        <SimulationResults simulation={simulation} jackpot={jackpot} />
+      )}
 
       {/* Game Combinations Visualization */}
       <GameCombinationsVisualization

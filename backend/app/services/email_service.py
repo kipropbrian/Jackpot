@@ -53,12 +53,12 @@ class EmailService:
         # Format payout
         formatted_payout = f"KSh {total_payout:,.0f}" if total_payout > 0 else "KSh 0"
         
-        # Create match summary with prize context
+        # Create match summary with prize context - using muted colors
         if winning_combinations > 0:
-            status_color = "#16a34a"  # green
+            status_color = "#059669"  # muted green
             status_text = f"🎉 Congratulations! You had {winning_combinations:,} winning combination{'s' if winning_combinations != 1 else ''} across different prize levels!"
         else:
-            status_color = "#dc2626"  # red
+            status_color = "#b91c1c"  # muted red
             status_text = f"No winning combinations this time, but your best match was {best_match_count} out of {len(actual_results)} games."
         
         # Create prize breakdown section HTML
@@ -84,8 +84,8 @@ class EmailService:
                 prize_breakdown_html += f"""
                                     <tr style="border-bottom: 1px solid #f1f5f9;">
                                         <td style="padding: 8px; font-weight: 500;">{prize['level']}</td>
-                                        <td style="padding: 8px; text-align: right; color: #16a34a; font-weight: 600;">{prize['winning_combinations']:,}</td>
-                                        <td style="padding: 8px; text-align: right; color: #16a34a; font-weight: 600;">KSh {prize['total_payout']:,.0f}</td>
+                                        <td style="padding: 8px; text-align: right; color: #059669; font-weight: 600;">{prize['winning_combinations']:,}</td>
+                                        <td style="padding: 8px; text-align: right; color: #059669; font-weight: 600;">KSh {prize['total_payout']:,.0f}</td>
                                     </tr>
                 """
             
@@ -108,7 +108,7 @@ class EmailService:
             <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); overflow: hidden;">
                 
                 <!-- Header -->
-                <div style="background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 30px 20px; text-align: center;">
+                <div style="background: linear-gradient(135deg, #475569 0%, #64748b 100%); color: white; padding: 30px 20px; text-align: center;">
                     <h1 style="margin: 0; font-size: 28px; font-weight: bold;">Analysis Complete!</h1>
                     <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Your simulation results are ready</p>
                 </div>
@@ -138,7 +138,7 @@ class EmailService:
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
                                 <span style="font-weight: 500;">Total Winning Combinations:</span>
-                                <span style="font-weight: 600; color: #16a34a;">{winning_combinations:,}</span>
+                                <span style="font-weight: 600; color: #059669;">{winning_combinations:,}</span>
                             </div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
@@ -148,7 +148,7 @@ class EmailService:
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
                                 <span style="font-weight: 500;">Total Prize Winnings:</span>
-                                <span style="font-weight: 600; color: #16a34a; font-size: 18px;">{formatted_payout}</span>
+                                <span style="font-weight: 600; color: #059669; font-size: 18px;">{formatted_payout}</span>
                             </div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
@@ -160,22 +160,15 @@ class EmailService:
                     
                     {prize_breakdown_html}
                     
-                    <!-- Actual Results -->
-                    <div style="background-color: #fefefe; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">Actual Jackpot Results</h3>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            {' '.join([f'<span style="background-color: #8b5cf6; color: white; width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; font-weight: 600; font-size: 14px;">{result}</span>' for result in actual_results])}
-                        </div>
-                        <p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280; font-style: italic;">
-                            1 = Home Win, X = Draw, 2 = Away Win
-                        </p>
-                    </div>
-                    
-                    <!-- CTA Button -->
+                    <!-- CTA Buttons -->
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="{results_url}" 
-                           style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-                            View Detailed Analysis
+                           style="display: inline-block; background: linear-gradient(135deg, #475569 0%, #64748b 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin: 0 8px 8px 0;">
+                            View Detailed Results
+                        </a>
+                        <a href="{results_url}" 
+                           style="display: inline-block; background: transparent; color: #475569; border: 2px solid #475569; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 0 8px 8px 0;">
+                            See Game Results
                         </a>
                     </div>
                     
@@ -188,7 +181,7 @@ class EmailService:
                 <div style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
                     <p style="margin: 0; font-size: 12px; color: #6b7280;">
                         You received this email because you have email notifications enabled.<br>
-                        <a href="{FRONTEND_URL}/dashboard/profile" style="color: #8b5cf6; text-decoration: none;">Manage your email preferences</a>
+                        <a href="{FRONTEND_URL}/dashboard/profile" style="color: #64748b; text-decoration: none;">Manage your email preferences</a>
                     </p>
                 </div>
             </div>

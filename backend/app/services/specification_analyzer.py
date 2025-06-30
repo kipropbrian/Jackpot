@@ -111,8 +111,14 @@ class SpecificationAnalyzer:
                 if total_combinations % 1000 == 0:
                     logger.info(f"[SpecificationAnalyzer] Processed {total_combinations}/{self.effective_combinations} combinations")
             
-            # Calculate totals
-            total_payout = sum(prize_level_payouts.values())
+            # Calculate totals using jackpot betting logic (only highest match counts)
+            # In jackpot betting, you only get paid for your highest match, not for all combinations
+            if best_match_count > 0 and prize_level_wins[str(best_match_count)] > 0:
+                # Get the actual jackpot prize for the best match
+                total_payout = self._calculate_payout(best_match_count)
+            else:
+                total_payout = 0.0
+            
             net_profit_loss = total_payout - float(self.total_cost)
             
             summary = {
@@ -184,7 +190,7 @@ class SpecificationAnalyzer:
 
     def _calculate_payout(self, matches: int) -> float:
         """Calculate payout for a given number of matches."""
-        prize_key = f"{matches}/{self.num_games}"
+        prize_key = f"{matches}/{matches}"
         if prize_key in self.jackpot_metadata.get("prizes", {}):
             return float(self.jackpot_metadata["prizes"][prize_key])
         return 0.0
@@ -195,12 +201,14 @@ class SpecificationAnalyzer:
         for level in self.prize_levels:
             level_str = str(level)
             if wins[level_str] > 0:
+                # Get the actual jackpot prize amount for this level
+                actual_prize_amount = self._calculate_payout(level)
                 breakdown.append({
                     "level": f"{level}/{self.num_games}",
                     "matches_required": level,
                     "winning_combinations": wins[level_str],
-                    "total_payout": payouts[level_str],
-                    "payout_per_winner": payouts[level_str] / wins[level_str] if wins[level_str] > 0 else 0
+                    "total_payout": actual_prize_amount if level == max([int(k) for k, v in wins.items() if v > 0], default=0) else 0,
+                    "payout_per_winner": actual_prize_amount
                 })
         return breakdown
 
