@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
 import { Simulation, Jackpot } from "@/lib/api/types";
+import { DashboardSkeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
   const {
@@ -37,6 +38,7 @@ export default function DashboardPage() {
         winningPercentage: 0,
         totalPayout: 0,
         netLoss: 0,
+        netResult: 0,
         bestMatchCount: 0,
       };
     }
@@ -44,6 +46,7 @@ export default function DashboardPage() {
     // Debug logging
     console.log("Dashboard simulations data:", {
       count: simulations.length,
+      completed: simulations.filter((s) => s.status === "completed").length,
       sample: simulations[0],
     });
 
@@ -70,9 +73,22 @@ export default function DashboardPage() {
         sum + toNumber(sim.basic_results?.total_payout),
       0
     );
-    const winRates = completedSims.map((sim: Simulation) =>
-      toNumber(sim.results?.analysis?.winning_percentage)
+
+    // Calculate simulation-level win rate (percentage of simulations that won something)
+    const winningSimsCount = completedSims.reduce(
+      (count: number, sim: Simulation) => {
+        const payout = toNumber(sim.basic_results?.total_payout);
+        return count + (payout > 0 ? 1 : 0);
+      },
+      0
     );
+    const simulationWinRate =
+      completedSims.length > 0
+        ? (winningSimsCount / completedSims.length) * 100
+        : 0;
+
+    // Calculate net result (positive = profit, negative = loss)
+    const netResult = totalWon - totalSpent;
 
     const finalStats = {
       totalSimulations: simulations.length,
@@ -80,26 +96,18 @@ export default function DashboardPage() {
       runningSimulations: runningSims.length,
       totalSpent,
       totalWon,
-      averageWinRate: winRates.length
-        ? winRates.reduce((a: number, b: number) => a + b, 0) / winRates.length
-        : 0,
-      bestWinRate: winRates.length ? Math.max(...winRates) : 0,
+      averageWinRate: simulationWinRate, // Now using simulation-level win rate
+      bestWinRate: simulationWinRate, // For now, same as average
       totalCombinations: completedSims.reduce(
         (sum: number, sim: Simulation) =>
           sum + toNumber(sim.effective_combinations),
         0
       ),
-      winningCombinations: completedSims.reduce(
-        (sum: number, sim: Simulation) => {
-          // Count simulations where total_payout > 0 as winning simulations
-          const payout = toNumber(sim.basic_results?.total_payout);
-          return sum + (payout > 0 ? 1 : 0);
-        },
-        0
-      ),
-      winningPercentage: 0, // Will be calculated when we have analysis data
+      winningCombinations: winningSimsCount, // This is clearer as winningSimsCount
+      winningPercentage: simulationWinRate,
       totalPayout: totalWon,
-      netLoss: totalSpent - totalWon,
+      netLoss: Math.abs(netResult), // Always positive for display
+      netResult: netResult, // Keep the actual result for logic
       bestMatchCount: completedSims.reduce(
         (max: number, sim: Simulation) =>
           Math.max(max, toNumber(sim.basic_results?.best_match_count)),
@@ -107,7 +115,14 @@ export default function DashboardPage() {
       ),
     };
 
-    console.log("Dashboard calculated stats:", finalStats);
+    console.log("Dashboard calculated stats:", {
+      ...finalStats,
+      winCalculation: `${winningSimsCount}/${
+        completedSims.length
+      } = ${simulationWinRate.toFixed(1)}%`,
+      netCalculation: `${totalWon} - ${totalSpent} = ${netResult}`,
+      isProfit: netResult >= 0,
+    });
     return finalStats;
   }, [simulations]);
 
@@ -126,13 +141,7 @@ export default function DashboardPage() {
   };
 
   if (isSimulationsLoading || isJackpotsLoading) {
-    return (
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <div className="text-gray-900 text-sm">Loading dashboard...</div>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error) {
@@ -369,9 +378,15 @@ export default function DashboardPage() {
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Net Loss
+                        {stats.netResult >= 0 ? "Net Profit" : "Net Loss"}
                       </dt>
-                      <dd className="mt-1 text-3xl font-semibold text-red-600">
+                      <dd
+                        className={`mt-1 text-3xl font-semibold ${
+                          stats.netResult >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
                         {formatCurrency(stats.netLoss)}
                       </dd>
                     </div>
