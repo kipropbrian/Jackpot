@@ -6,24 +6,20 @@ import { useJackpots } from "@/lib/hooks/use-jackpots";
 import { Simulation, Jackpot } from "@/lib/api/types";
 
 export default function DashboardPage() {
-  const { simulations, isLoading: isSimulationsLoading } = useSimulations();
+  const {
+    simulations,
+    isLoading: isSimulationsLoading,
+    error,
+  } = useSimulations({
+    page: 1,
+    pageSize: 100, // Get more simulations for better stats
+    enablePolling: false, // Disable polling for dashboard
+  });
   const { jackpots, loading: isJackpotsLoading } = useJackpots();
 
   const currentJackpot = useMemo(() => {
     if (!jackpots || jackpots.length === 0) return null;
-
-    // First, try to find an active jackpot (status: "open")
-    const activeJackpot = jackpots.find(
-      (jackpot: Jackpot) => jackpot.status === "open"
-    );
-    if (activeJackpot) return activeJackpot;
-
-    // If no active jackpot, return the latest one (most recent scraped_at)
-    return jackpots.reduce((latest: Jackpot, current: Jackpot) => {
-      const latestDate = new Date(latest.scraped_at);
-      const currentDate = new Date(current.scraped_at);
-      return currentDate > latestDate ? current : latest;
-    });
+    return jackpots.find((j: any) => j.status === "open") || jackpots[0];
   }, [jackpots]);
 
   const stats = useMemo(() => {
@@ -45,25 +41,40 @@ export default function DashboardPage() {
       };
     }
 
+    // Debug logging
+    console.log("Dashboard simulations data:", {
+      count: simulations.length,
+      sample: simulations[0],
+    });
+
     const completedSims = simulations.filter(
       (sim: Simulation) => sim.status === "completed"
     );
     const runningSims = simulations.filter(
       (sim: Simulation) => sim.status === "running" || sim.status === "pending"
     );
+
+    // Helper function to safely convert to number
+    const toNumber = (value: any): number => {
+      if (value === null || value === undefined) return 0;
+      const num = Number(value);
+      return isNaN(num) ? 0 : num;
+    };
+
     const totalSpent = simulations.reduce(
-      (sum: number, sim: Simulation) => sum + (sim.total_cost || 0),
+      (sum: number, sim: Simulation) => sum + toNumber(sim.total_cost),
       0
     );
     const totalWon = completedSims.reduce(
-      (sum: number, sim: Simulation) => sum + (sim.results?.total_payout || 0),
+      (sum: number, sim: Simulation) =>
+        sum + toNumber(sim.basic_results?.total_payout),
       0
     );
-    const winRates = completedSims.map(
-      (sim: Simulation) => sim.results?.analysis?.winning_percentage || 0
+    const winRates = completedSims.map((sim: Simulation) =>
+      toNumber(sim.results?.analysis?.winning_percentage)
     );
 
-    return {
+    const finalStats = {
       totalSimulations: simulations.length,
       completedSimulations: completedSims.length,
       runningSimulations: runningSims.length,
@@ -75,12 +86,15 @@ export default function DashboardPage() {
       bestWinRate: winRates.length ? Math.max(...winRates) : 0,
       totalCombinations: completedSims.reduce(
         (sum: number, sim: Simulation) =>
-          sum + (sim.effective_combinations || 0),
+          sum + toNumber(sim.effective_combinations),
         0
       ),
       winningCombinations: completedSims.reduce(
-        (sum: number, sim: Simulation) =>
-          sum + (sim.results?.total_winners || 0),
+        (sum: number, sim: Simulation) => {
+          // Count simulations where total_payout > 0 as winning simulations
+          const payout = toNumber(sim.basic_results?.total_payout);
+          return sum + (payout > 0 ? 1 : 0);
+        },
         0
       ),
       winningPercentage: 0, // Will be calculated when we have analysis data
@@ -88,13 +102,20 @@ export default function DashboardPage() {
       netLoss: totalSpent - totalWon,
       bestMatchCount: completedSims.reduce(
         (max: number, sim: Simulation) =>
-          Math.max(max, sim.results?.best_match_count || 0),
+          Math.max(max, toNumber(sim.basic_results?.best_match_count)),
         0
       ),
     };
+
+    console.log("Dashboard calculated stats:", finalStats);
+    return finalStats;
   }, [simulations]);
 
   const formatCurrency = (amount: number) => {
+    // Handle NaN, null, undefined, and invalid numbers
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      amount = 0;
+    }
     return `KSh ${Math.round(amount).toLocaleString()}`;
   };
 
@@ -109,6 +130,18 @@ export default function DashboardPage() {
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:px-6">
           <div className="text-gray-900 text-sm">Loading dashboard...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-4 py-5 sm:px-6">
+          <div className="text-red-600 text-sm">
+            Error loading dashboard: {error}
+          </div>
         </div>
       </div>
     );
@@ -296,7 +329,7 @@ export default function DashboardPage() {
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Winning Combinations
+                        Winning Simulations
                       </dt>
                       <dd className="mt-1 text-3xl font-semibold text-gray-900">
                         {stats.winningCombinations.toLocaleString()}

@@ -15,14 +15,14 @@ interface UseSimulationsOptions {
 }
 
 export function useSimulations(options: UseSimulationsOptions = {}) {
-  const { page = 1, pageSize = 10, enablePolling = true } = options;
+  const { page = 1, pageSize = 10, enablePolling = false } = options;
   const queryClient = useQueryClient();
 
   // Fetch simulations with React Query
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["simulations", page, pageSize],
     queryFn: () => SimulationService.getSimulations(page, pageSize),
-    staleTime: 2 * 60 * 1000, // 2 minutes (reduced from 5 minutes for better responsiveness)
+    staleTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: (query) => {
       // Only poll if enablePolling is true
       if (!enablePolling) {
@@ -32,19 +32,18 @@ export function useSimulations(options: UseSimulationsOptions = {}) {
       // Auto-refetch if there are simulations that might be changing status
       const simulations = query.state.data?.simulations || [];
 
-      // Check if any simulation is in a transitional state
+      // Check if any simulation is in a transitional state (NOT completed)
       const hasActiveSimulations = simulations.some(
         (sim: SimulationWithSpecification) =>
           sim.status === "running" ||
+          sim.status === "pending" ||
           sim.enhanced_status === "analyzing" ||
-          sim.enhanced_status === "waiting_for_games" ||
-          (sim.status === "completed" && !sim.results)
+          sim.enhanced_status === "waiting_for_games"
       );
 
-      // If there are active simulations, poll every 15 seconds
-      // This is slightly less frequent than individual simulation polling to reduce load
+      // If there are active simulations, poll every 30 seconds
       if (hasActiveSimulations) {
-        return 15000; // 15 seconds
+        return 30000; // 30 seconds - reduced frequency
       }
 
       // Otherwise, don't auto-refetch

@@ -113,26 +113,37 @@ class SpecificationAnalyzer:
             
             # Calculate totals using jackpot betting logic (only highest match counts)
             # In jackpot betting, you only get paid for your highest match, not for all combinations
-            if best_match_count > 0 and prize_level_wins[str(best_match_count)] > 0:
+            if best_match_count > 0 and best_match_count in self.prize_levels and prize_level_wins[str(best_match_count)] > 0:
                 # Get the actual jackpot prize for the best match
                 total_payout = self._calculate_payout(best_match_count)
             else:
                 total_payout = 0.0
             
-            net_profit_loss = total_payout - float(self.total_cost)
+            # Ensure total_cost is a valid number
+            try:
+                cost_value = float(self.total_cost)
+                if cost_value != cost_value or cost_value == float('inf') or cost_value == float('-inf'):  # Check for NaN and infinity
+                    cost_value = 0.0
+            except (ValueError, TypeError):
+                cost_value = 0.0
+            
+            net_profit_loss = total_payout - cost_value
+            
+            # Ensure all values are valid numbers
+            winning_percentage = round(total_winners / total_combinations * 100, 4) if total_combinations > 0 else 0.0
             
             summary = {
                 "simulation_id": self.simulation_id,
                 "prize_level_wins": prize_level_wins,
                 "prize_level_payouts": prize_level_payouts,
-                "total_payout": float(total_payout),
+                "total_payout": float(total_payout) if not (total_payout != total_payout) else 0.0,
                 "total_winners": total_winners,
                 "net_loss": -net_profit_loss if net_profit_loss < 0 else 0.0,
                 "best_match_count": best_match_count,
                 "analysis": {
                     "total_combinations": total_combinations,
                     "total_winners": total_winners,
-                    "winning_percentage": round(total_winners / total_combinations * 100, 4) if total_combinations > 0 else 0,
+                    "winning_percentage": winning_percentage,
                     "actual_results": self.actual_results,
                     "combination_type": self.specification["combination_type"],
                     "double_games": self.specification["double_games"],
@@ -192,7 +203,11 @@ class SpecificationAnalyzer:
         """Calculate payout for a given number of matches."""
         prize_key = f"{matches}/{matches}"
         if prize_key in self.jackpot_metadata.get("prizes", {}):
-            return float(self.jackpot_metadata["prizes"][prize_key])
+            try:
+                payout = float(self.jackpot_metadata["prizes"][prize_key])
+                return payout if not (payout != payout or payout == float('inf') or payout == float('-inf')) else 0.0  # Check for NaN and infinity
+            except (ValueError, TypeError):
+                return 0.0
         return 0.0
 
     def _format_prize_breakdown(self, wins: Dict[str, int], payouts: Dict[str, float]) -> List[Dict[str, Any]]:
@@ -200,14 +215,16 @@ class SpecificationAnalyzer:
         breakdown = []
         for level in self.prize_levels:
             level_str = str(level)
-            if wins[level_str] > 0:
+            wins_count = wins.get(level_str, 0)
+            if wins_count > 0:
                 # Get the actual jackpot prize amount for this level
                 actual_prize_amount = self._calculate_payout(level)
+                max_winning_level = max([int(k) for k, v in wins.items() if v > 0], default=0)
                 breakdown.append({
                     "level": f"{level}/{self.num_games}",
                     "matches_required": level,
-                    "winning_combinations": wins[level_str],
-                    "total_payout": actual_prize_amount if level == max([int(k) for k, v in wins.items() if v > 0], default=0) else 0,
+                    "winning_combinations": wins_count,
+                    "total_payout": actual_prize_amount if level == max_winning_level else 0.0,
                     "payout_per_winner": actual_prize_amount
                 })
         return breakdown

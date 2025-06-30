@@ -22,21 +22,37 @@ export default function SimulationResults({
   const analysis = results.analysis;
 
   const formatCurrency = (amount: number, currency = "KSh") => {
+    // Handle NaN, null, undefined, and invalid numbers
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      amount = 0;
+    }
     return `${currency} ${amount.toLocaleString()}`;
   };
 
   const formatPercentage = (value: number) => {
+    // Handle NaN, null, undefined, and invalid numbers
+    if (value === null || value === undefined || isNaN(value)) {
+      value = 0;
+    }
     return `${value.toFixed(4)}%`;
   };
 
+  // Helper function to safely convert to number
+  const toNumber = (value: any): number => {
+    if (value === null || value === undefined) return 0;
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
+  };
+
   // Calculate correct gambling logic
-  const bestMatchCount = results.best_match_count;
-  const totalCombinations = analysis.total_combinations;
+  const bestMatchCount = toNumber(results.best_match_count);
+  const totalCombinations = toNumber(analysis.total_combinations);
 
   // In jackpot betting, you only get paid for your highest match
   // Find how many combinations achieved the best match
-  const bestMatchWinners =
-    results.prize_level_wins[bestMatchCount.toString()] || 0;
+  const bestMatchWinners = toNumber(
+    results.prize_level_wins[bestMatchCount.toString()]
+  );
 
   // Get the actual payout for the best match from jackpot metadata or fallback to results
   let actualTotalPayout = 0;
@@ -46,17 +62,18 @@ export default function SimulationResults({
     const prizeKey = `${bestMatchCount}/${bestMatchCount}`;
     if (simulation.jackpot_metadata?.prizes?.[prizeKey]) {
       // Use the actual jackpot prize amount
-      payoutPerWinner = simulation.jackpot_metadata.prizes[prizeKey];
+      payoutPerWinner = toNumber(simulation.jackpot_metadata.prizes[prizeKey]);
       actualTotalPayout = payoutPerWinner; // You only win once, regardless of combinations
     } else {
       // Fallback to the calculated payout from results
-      payoutPerWinner =
-        results.prize_level_payouts[bestMatchCount.toString()] || 0;
+      payoutPerWinner = toNumber(
+        results.prize_level_payouts[bestMatchCount.toString()]
+      );
       actualTotalPayout = payoutPerWinner;
     }
   }
 
-  const actualNetResult = actualTotalPayout - simulation.total_cost;
+  const actualNetResult = actualTotalPayout - toNumber(simulation.total_cost);
 
   // Build complete prize structure for display
   const allPrizeLevels = [];

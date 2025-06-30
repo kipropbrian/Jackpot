@@ -58,7 +58,7 @@ class EmailService:
             status_color = "#059669"  # muted green
             status_text = f"🎉 Congratulations! You won {best_match_count} out of {len(actual_results)} games!"
         else:
-            status_color = "#b91c1c"  # muted red
+            status_color = "#6b7280"  # muted gray
             status_text = f"No winning combinations this time, but your best match was {best_match_count} out of {len(actual_results)} games."
         
         # Create prize breakdown section HTML - only show highest winning level

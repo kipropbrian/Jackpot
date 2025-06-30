@@ -27,6 +27,21 @@ export default function SimulationsPage() {
     simulation: null,
   });
 
+  // Helper function to safely convert to number and handle NaN
+  const toNumber = (value: any): number => {
+    if (value === null || value === undefined) return 0;
+    const num = Number(value);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const formatCurrency = (amount: number) => {
+    const safeAmount = toNumber(amount);
+    return safeAmount.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   // Format date for display
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -249,39 +264,43 @@ export default function SimulationsPage() {
                       {formatDate(simulation.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {simulation.effective_combinations.toLocaleString()}
+                      {toNumber(
+                        simulation.effective_combinations
+                      ).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      KSh{" "}
-                      {simulation.total_cost.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      KSh {formatCurrency(simulation.total_cost)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {simulation.basic_results ? (
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
                             <span className="text-blue-600 font-medium">
-                              Best: {simulation.basic_results.best_match_count}{" "}
+                              Best:{" "}
+                              {toNumber(
+                                simulation.basic_results.best_match_count
+                              )}{" "}
                               games
                             </span>
                           </div>
                           <div
                             className={`text-xs ${
-                              simulation.basic_results.total_payout >
-                              simulation.total_cost
+                              toNumber(simulation.basic_results.total_payout) >
+                              toNumber(simulation.total_cost)
                                 ? "text-green-600"
                                 : "text-red-600"
                             }`}
                           >
-                            {simulation.basic_results.total_payout >
-                            simulation.total_cost
+                            {toNumber(simulation.basic_results.total_payout) >
+                            toNumber(simulation.total_cost)
                               ? `+KSh ${(
-                                  simulation.basic_results.total_payout -
-                                  simulation.total_cost
+                                  toNumber(
+                                    simulation.basic_results.total_payout
+                                  ) - toNumber(simulation.total_cost)
                                 ).toLocaleString()}`
-                              : `-KSh ${simulation.basic_results.net_loss.toLocaleString()}`}
+                              : `-KSh ${toNumber(
+                                  simulation.basic_results.net_loss
+                                ).toLocaleString()}`}
                           </div>
                         </div>
                       ) : simulation.enhanced_status === "results_available" ? (
