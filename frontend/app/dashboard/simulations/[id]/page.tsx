@@ -20,7 +20,9 @@ export default function SimulationDetailsPage({
   const { jackpot, loading: jackpotLoading } = useJackpot(
     simulation?.jackpot_id
   );
-  const { deleteSimulation, isDeleting } = useSimulations();
+  const { deleteSimulation, isDeleting } = useSimulations({
+    enablePolling: false, // Disable polling since we're only using delete function
+  });
 
   // State for delete modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);

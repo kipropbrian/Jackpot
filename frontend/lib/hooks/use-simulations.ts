@@ -11,10 +11,11 @@ import {
 interface UseSimulationsOptions {
   page?: number;
   pageSize?: number;
+  enablePolling?: boolean;
 }
 
 export function useSimulations(options: UseSimulationsOptions = {}) {
-  const { page = 1, pageSize = 10 } = options;
+  const { page = 1, pageSize = 10, enablePolling = true } = options;
   const queryClient = useQueryClient();
 
   // Fetch simulations with React Query
@@ -23,6 +24,11 @@ export function useSimulations(options: UseSimulationsOptions = {}) {
     queryFn: () => SimulationService.getSimulations(page, pageSize),
     staleTime: 2 * 60 * 1000, // 2 minutes (reduced from 5 minutes for better responsiveness)
     refetchInterval: (query) => {
+      // Only poll if enablePolling is true
+      if (!enablePolling) {
+        return false;
+      }
+
       // Auto-refetch if there are simulations that might be changing status
       const simulations = query.state.data?.simulations || [];
 

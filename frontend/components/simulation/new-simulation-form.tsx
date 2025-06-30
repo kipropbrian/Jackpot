@@ -73,7 +73,7 @@ const sliderStyles = `
 `;
 
 const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
-  const { simulations } = useSimulations();
+  const { simulations } = useSimulations({ enablePolling: false }); // Disable polling - only used for name generation
   const { jackpots, loading: jackpotsLoading } = useJackpots();
   const { isAdmin } = useIsAdmin();
 
@@ -126,10 +126,13 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
 
     try {
       // Call validation API using the API client
-      const response = await apiClient.post(API_ENDPOINTS.VALIDATE_SELECTIONS, {
-        game_selections: gameSelections,
-        jackpot_id: selectedJackpot.id,
-      });
+      // Send jackpot_id as query parameter and game_selections in body
+      const response = await apiClient.post(
+        `${API_ENDPOINTS.VALIDATE_SELECTIONS}?jackpot_id=${selectedJackpot.id}`,
+        {
+          game_selections: gameSelections,
+        }
+      );
 
       if (response.data) {
         setValidation(response.data);

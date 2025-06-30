@@ -25,21 +25,23 @@ export function useNotifications() {
         1,
         10,
       ]) as { simulations?: any[] } | undefined;
-      const simulations = simulationsData?.simulations || [];
 
-      const hasActiveSimulations = simulations.some(
-        (sim: any) =>
-          sim.status === "running" ||
-          sim.enhanced_status === "analyzing" ||
-          sim.enhanced_status === "waiting_for_games"
-      );
+      // If we have simulations data, check for active ones
+      if (simulationsData?.simulations) {
+        const hasActiveSimulations = simulationsData.simulations.some(
+          (sim: any) =>
+            sim.status === "running" ||
+            sim.enhanced_status === "analyzing" ||
+            sim.enhanced_status === "waiting_for_games"
+        );
 
-      // Poll more frequently when there are active simulations
-      if (hasActiveSimulations) {
-        return 30 * 1000; // 30 seconds
+        // Poll more frequently when there are active simulations
+        if (hasActiveSimulations) {
+          return 30 * 1000; // 30 seconds
+        }
       }
 
-      // Otherwise, poll every minute
+      // Otherwise, poll every minute (default)
       return 60 * 1000; // 1 minute
     },
   });

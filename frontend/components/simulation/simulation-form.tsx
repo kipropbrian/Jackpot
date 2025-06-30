@@ -46,7 +46,7 @@ const COMBINATION_OPTIONS = [
 ];
 
 const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
-  const { simulations } = useSimulations();
+  const { simulations } = useSimulations({ enablePolling: false }); // Disable polling - only used for name generation
   const {
     jackpots,
     loading: jackpotsLoading,

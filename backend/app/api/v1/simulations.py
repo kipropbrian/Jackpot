@@ -434,11 +434,14 @@ async def get_combination_preview(
 
 @router.post("/validate-selections", response_model=GameSelectionValidationResponse)
 async def validate_game_selections(
-    game_selections: dict,
+    request: GameSelectionValidationRequest,
     jackpot_id: str
 ):
     """Validate game selections and calculate combinations/cost"""
     try:
+        # Extract game selections from the request
+        game_selections = request.game_selections
+        
         # Create temporary specification generator for validation
         temp_generator = CombinationSpecificationGenerator(
             simulation_id="temp_validation",

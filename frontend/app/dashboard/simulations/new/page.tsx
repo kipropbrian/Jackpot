@@ -7,7 +7,9 @@ import { SimulationCreate } from "@/lib/api/types";
 
 export default function NewSimulationPage() {
   const router = useRouter();
-  const { createSimulation, createError } = useSimulations();
+  const { createSimulation, createError } = useSimulations({
+    enablePolling: false, // Disable polling since we're only using create function
+  });
 
   // Handler for NewSimulationForm
   const handleSimulationSubmit = async (values: SimulationCreate) => {
