@@ -21,7 +21,6 @@ export interface Simulation {
   jackpot_metadata?: JackpotMetadata;
   has_results?: boolean;
   basic_results?: {
-    total_winners: number;
     total_payout: number;
     net_loss: number;
     best_match_count: number;

@@ -136,7 +136,7 @@ async def get_simulations(
                 try:
                     results_response = (
                         supabase.table("simulation_results")
-                        .select("total_winners, total_payout, net_loss, best_match_count")
+                        .select("total_payout, net_loss, best_match_count")
                         .eq("simulation_id", sim["id"])
                         .execute()
                     )

@@ -262,12 +262,9 @@ export default function SimulationsPage() {
                       {simulation.basic_results ? (
                         <div className="space-y-1">
                           <div className="flex items-center space-x-2">
-                            <span className="text-green-600 font-medium">
-                              {simulation.basic_results.total_winners} wins
-                            </span>
-                            <span className="text-gray-400">•</span>
-                            <span className="text-blue-600">
-                              {simulation.basic_results.best_match_count} best
+                            <span className="text-blue-600 font-medium">
+                              Best: {simulation.basic_results.best_match_count}{" "}
+                              games
                             </span>
                           </div>
                           <div

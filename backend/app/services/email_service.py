@@ -56,45 +56,39 @@ class EmailService:
         # Create match summary with prize context - using muted colors
         if winning_combinations > 0:
             status_color = "#059669"  # muted green
-            status_text = f"🎉 Congratulations! You had {winning_combinations:,} winning combination{'s' if winning_combinations != 1 else ''} across different prize levels!"
+            status_text = f"🎉 Congratulations! You won {best_match_count} out of {len(actual_results)} games!"
         else:
             status_color = "#b91c1c"  # muted red
             status_text = f"No winning combinations this time, but your best match was {best_match_count} out of {len(actual_results)} games."
         
-        # Create prize breakdown section HTML
+        # Create prize breakdown section HTML - only show highest winning level
         prize_breakdown_html = ""
         if prize_breakdown and len(prize_breakdown) > 0:
-            prize_breakdown_html = """
-                    <!-- Prize Breakdown -->
-                    <div style="background-color: #fefefe; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                        <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">Prize Level Breakdown</h3>
-                        <div style="overflow-x: auto;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-                                <thead>
-                                    <tr style="background-color: #f8fafc;">
-                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb; font-weight: 600;">Prize Level</th>
-                                        <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 600;">Winners</th>
-                                        <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 600;">Total Payout</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-            """
+            # Find the highest level with winnings
+            highest_winning_prize = None
+            for prize in sorted(prize_breakdown, key=lambda x: int(x['level'].split('/')[0]), reverse=True):
+                if prize['winning_combinations'] > 0:
+                    highest_winning_prize = prize
+                    break
             
-            for prize in prize_breakdown:
-                prize_breakdown_html += f"""
-                                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                                        <td style="padding: 8px; font-weight: 500;">{prize['level']}</td>
-                                        <td style="padding: 8px; text-align: right; color: #059669; font-weight: 600;">{prize['winning_combinations']:,}</td>
-                                        <td style="padding: 8px; text-align: right; color: #059669; font-weight: 600;">KSh {prize['total_payout']:,.0f}</td>
-                                    </tr>
-                """
-            
-            prize_breakdown_html += """
-                                </tbody>
-                            </table>
+            if highest_winning_prize:
+                prize_breakdown_html = f"""
+                        <!-- Your Best Result -->
+                        <div style="background-color: #f0fdf4; border: 2px solid #059669; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                            <h3 style="margin: 0 0 15px 0; color: #1f2937; font-size: 18px;">🏆 Your Best Result</h3>
+                            <div style="background-color: #059669; color: white; padding: 15px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; margin-bottom: 8px;">
+                                    {highest_winning_prize['level']} Games Correct
+                                </div>
+                                <div style="font-size: 28px; font-weight: bold;">
+                                    KSh {highest_winning_prize['total_payout']:,.0f}
+                                </div>
+                                <div style="font-size: 14px; opacity: 0.9; margin-top: 8px;">
+                                    {highest_winning_prize['winning_combinations']:,} winning combinations
+                                </div>
+                            </div>
                         </div>
-                    </div>
-            """
+                """
         
         html_content = f"""
         <!DOCTYPE html>
@@ -137,16 +131,6 @@ class EmailService:
                             </div>
                             
                             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                <span style="font-weight: 500;">Total Winning Combinations:</span>
-                                <span style="font-weight: 600; color: #059669;">{winning_combinations:,}</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                                <span style="font-weight: 500;">Overall Win Rate:</span>
-                                <span style="font-weight: 600; color: #1f2937;">{win_rate:.2f}%</span>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
                                 <span style="font-weight: 500;">Total Prize Winnings:</span>
                                 <span style="font-weight: 600; color: #059669; font-size: 18px;">{formatted_payout}</span>
                             </div>
@@ -160,15 +144,11 @@ class EmailService:
                     
                     {prize_breakdown_html}
                     
-                    <!-- CTA Buttons -->
+                    <!-- CTA Button -->
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="{results_url}" 
-                           style="display: inline-block; background: linear-gradient(135deg, #475569 0%, #64748b 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin: 0 8px 8px 0;">
+                           style="display: inline-block; background: linear-gradient(135deg, #475569 0%, #64748b 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
                             View Detailed Results
-                        </a>
-                        <a href="{results_url}" 
-                           style="display: inline-block; background: transparent; color: #475569; border: 2px solid #475569; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 0 8px 8px 0;">
-                            See Game Results
                         </a>
                     </div>
                     
