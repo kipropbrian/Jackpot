@@ -7,8 +7,10 @@ import SimulationDetailsSkeleton from "@/components/simulation/simulation-detail
 import { DeleteConfirmationModal } from "@/components/simulation/delete-confirmation-modal";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useSimulation, useSimulations } from "@/lib/hooks/use-simulations";
-import { useJackpot } from "@/lib/hooks/use-jackpot";
+import {
+  useSimulation,
+  useSimulationMutations,
+} from "@/lib/hooks/use-simulations";
 
 export default function SimulationDetailsPage({
   params,
@@ -17,12 +19,7 @@ export default function SimulationDetailsPage({
 }) {
   const router = useRouter();
   const { simulation, loading, error } = useSimulation(params.id);
-  const { jackpot, loading: jackpotLoading } = useJackpot(
-    simulation?.jackpot_id
-  );
-  const { deleteSimulation, isDeleting } = useSimulations({
-    enablePolling: false, // Disable polling since we're only using delete function
-  });
+  const { deleteSimulation, isDeleting } = useSimulationMutations();
 
   // State for delete modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -45,7 +42,11 @@ export default function SimulationDetailsPage({
   };
 
   // Format status for display with appropriate color using enhanced status
-  const getStatusBadge = (simulation: any) => {
+  const getStatusBadge = (simulation: {
+    enhanced_status?: string;
+    status: string;
+    jackpot_name?: string;
+  }) => {
     const statusToUse = simulation.enhanced_status || simulation.status;
     let color = "";
     let displayText = "";
@@ -115,7 +116,7 @@ export default function SimulationDetailsPage({
     );
   }
 
-  if (loading || jackpotLoading) {
+  if (loading) {
     return <SimulationDetailsSkeleton />;
   }
 
@@ -167,14 +168,12 @@ export default function SimulationDetailsPage({
       </div>
 
       {/* Analysis Results - MOVED TO THE TOP */}
-      {simulation.results && (
-        <SimulationResults simulation={simulation} jackpot={jackpot} />
-      )}
+      {simulation.results && <SimulationResults simulation={simulation} />}
 
       {/* Game Combinations Visualization */}
       <GameCombinationsVisualization
         specification={simulation.specification || null}
-        jackpotName={jackpot?.name}
+        jackpotName={simulation?.jackpot_name}
       />
 
       {/* Enhanced status messages */}
@@ -201,9 +200,9 @@ export default function SimulationDetailsPage({
               <div className="mt-2 text-sm text-orange-700">
                 <p>
                   Your simulation is ready, but the jackpot "
-                  {simulation.jackpot_name || jackpot?.name || "Unknown"}" games
-                  are still in progress. Analysis will be available once all
-                  games are completed.
+                  {simulation.jackpot_name || "Unknown"}" games are still in
+                  progress. Analysis will be available once all games are
+                  completed.
                 </p>
               </div>
             </div>

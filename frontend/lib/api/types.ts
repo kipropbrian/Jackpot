@@ -18,6 +18,7 @@ export interface Simulation {
   enhanced_status?: "waiting_for_games" | "analyzing" | "results_available";
   jackpot_status?: "open" | "completed";
   jackpot_name?: string;
+  jackpot_metadata?: JackpotMetadata;
   has_results?: boolean;
   basic_results?: {
     total_winners: number;

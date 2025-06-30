@@ -107,6 +107,57 @@ export function useSimulations(options: UseSimulationsOptions = {}) {
   };
 }
 
+// Mutations-only hook for when you don't need the simulations list
+export function useSimulationMutations() {
+  const queryClient = useQueryClient();
+
+  // Create simulation mutation
+  const createMutation = useMutation({
+    mutationFn: (data: SimulationCreate) =>
+      SimulationService.createSimulation(data),
+    onSuccess: () => {
+      // Invalidate and refetch simulations
+      queryClient.invalidateQueries({ queryKey: ["simulations"] });
+    },
+  });
+
+  // Update simulation mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: SimulationUpdate }) =>
+      SimulationService.updateSimulation(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["simulations"] });
+      queryClient.invalidateQueries({ queryKey: ["simulation"] }); // Also invalidate individual simulation queries
+    },
+  });
+
+  // Delete simulation mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => SimulationService.deleteSimulation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["simulations"] });
+      queryClient.invalidateQueries({ queryKey: ["simulation"] });
+    },
+  });
+
+  return {
+    // Mutations
+    createSimulation: createMutation.mutateAsync,
+    updateSimulation: (id: string, data: SimulationUpdate) =>
+      updateMutation.mutateAsync({ id, data }),
+    deleteSimulation: deleteMutation.mutateAsync,
+
+    // Mutation states
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+
+    createError: createMutation.error?.message || null,
+    updateError: updateMutation.error?.message || null,
+    deleteError: deleteMutation.error?.message || null,
+  };
+}
+
 // Separate hook for individual simulation
 export function useSimulation(id: string | undefined) {
   const {

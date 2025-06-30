@@ -39,6 +39,7 @@ class SimulationResponse(BaseModel):
     enhanced_status: Optional[str] = None  # More detailed status for UI
     jackpot_status: Optional[str] = None  # Status of the associated jackpot
     jackpot_name: Optional[str] = None  # Name of the associated jackpot
+    jackpot_metadata: Optional[Dict[str, Any]] = None  # Essential jackpot metadata (prizes, etc.)
     has_results: Optional[bool] = False  # Whether analysis results exist
     basic_results: Optional[Dict[str, Any]] = None  # Prefetched basic results for performance
     created_at: datetime

@@ -204,7 +204,7 @@ async def get_simulation(
     simulation_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get a specific simulation with its bet specification."""
+    """Get a specific simulation with its bet specification and essential jackpot metadata."""
     try:
         # Get simulation
         sim_response = (
@@ -223,6 +223,24 @@ async def get_simulation(
             )
         
         simulation = sim_response.data
+        
+        # Get essential jackpot metadata (name, status, prizes) - no games data
+        jackpot_response = (
+            supabase.table("jackpots")
+            .select("name, status, metadata")
+            .eq("id", simulation["jackpot_id"])
+            .single()
+            .execute()
+        )
+        
+        jackpot_data = jackpot_response.data if jackpot_response.data else {}
+        logger.info(f"Jackpot data for simulation {simulation_id}: {jackpot_data}")
+        
+        # Debug: check if metadata exists and has prizes
+        if jackpot_data.get("metadata") and jackpot_data["metadata"].get("prizes"):
+            logger.info(f"Found jackpot metadata with prizes: {list(jackpot_data['metadata']['prizes'].keys())}")
+        else:
+            logger.warning(f"No jackpot metadata or prizes found for jackpot {simulation['jackpot_id']}")
         
         # Get bet specification if it exists
         spec_response = (
@@ -250,11 +268,17 @@ async def get_simulation(
             logger.error(f"Failed to fetch results for simulation {simulation_id}: {e}")
             results = None
         
-        return {
+        # Enhance simulation with jackpot metadata
+        enhanced_simulation = {
             **simulation,
+            "jackpot_name": jackpot_data.get("name"),
+            "jackpot_status": jackpot_data.get("status"),
+            "jackpot_metadata": jackpot_data.get("metadata"),
             "specification": specification,
             "results": results
         }
+        
+        return enhanced_simulation
         
     except HTTPException:
         raise
@@ -485,6 +509,64 @@ async def validate_game_selections(
 async def get_sportpesa_rules():
     """Get SportPesa betting rules and limits."""
     return SportPesaRules()
+
+@router.delete("/{simulation_id}/results")
+async def delete_simulation_results(
+    simulation_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete simulation results to allow re-analysis with updated jackpot metadata"""
+    try:
+        # Verify simulation ownership first
+        sim_response = (
+            supabase.table("simulations")
+            .select("id, jackpot_id")
+            .eq("id", simulation_id)
+            .eq("user_id", current_user["id"])
+            .single()
+            .execute()
+        )
+        
+        if not sim_response.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Simulation not found"
+            )
+        
+        # Delete existing results
+        delete_response = (
+            supabase.table("simulation_results")
+            .delete()
+            .eq("simulation_id", simulation_id)
+            .execute()
+        )
+        
+        # Trigger re-analysis immediately
+        try:
+            from app.services.specification_analyzer import SpecificationAnalyzer
+            analyzer = SpecificationAnalyzer(simulation_id, sim_response.data["jackpot_id"])
+            analyzer.analyze()
+            logger.info(f"Re-analysis completed for simulation {simulation_id}")
+            
+            return {
+                "message": "Results deleted and re-analysis completed",
+                "simulation_id": simulation_id
+            }
+        except Exception as e:
+            logger.error(f"Re-analysis failed for simulation {simulation_id}: {e}")
+            return {
+                "message": "Results deleted but re-analysis failed",
+                "simulation_id": simulation_id,
+                "error": str(e)
+            }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete results: {str(e)}"
+        )
 
 @router.get("/{simulation_id}/debug-results")
 async def debug_simulation_results(

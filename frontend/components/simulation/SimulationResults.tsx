@@ -1,13 +1,11 @@
-import { Simulation, Jackpot } from "@/lib/api/types";
+import { Simulation } from "@/lib/api/types";
 
 interface SimulationResultsProps {
   simulation: Simulation;
-  jackpot?: Jackpot | null;
 }
 
 export default function SimulationResults({
   simulation,
-  jackpot,
 }: SimulationResultsProps) {
   if (!simulation.results) {
     return (
@@ -46,9 +44,9 @@ export default function SimulationResults({
 
   if (bestMatchCount > 0 && bestMatchWinners > 0) {
     const prizeKey = `${bestMatchCount}/${bestMatchCount}`;
-    if (jackpot?.metadata?.prizes?.[prizeKey]) {
+    if (simulation.jackpot_metadata?.prizes?.[prizeKey]) {
       // Use the actual jackpot prize amount
-      payoutPerWinner = jackpot.metadata.prizes[prizeKey];
+      payoutPerWinner = simulation.jackpot_metadata.prizes[prizeKey];
       actualTotalPayout = payoutPerWinner; // You only win once, regardless of combinations
     } else {
       // Fallback to the calculated payout from results
@@ -62,13 +60,13 @@ export default function SimulationResults({
 
   // Build complete prize structure for display
   const allPrizeLevels = [];
-  if (jackpot?.metadata?.prizes) {
+  if (simulation.jackpot_metadata?.prizes) {
     const totalGames = analysis.actual_results.length;
 
     // Start from the minimum prize level up to total games
     for (let level = 13; level <= totalGames; level++) {
       const prizeKey = `${level}/${level}`;
-      const prizeAmount = jackpot.metadata.prizes[prizeKey] || 0;
+      const prizeAmount = simulation.jackpot_metadata.prizes[prizeKey] || 0;
       const combinationsAtLevel =
         results.prize_level_wins[level.toString()] || 0;
       const isWon = level === bestMatchCount && combinationsAtLevel > 0;
