@@ -38,7 +38,7 @@ export default function SimulationResults({
   };
 
   // Helper function to safely convert to number
-  const toNumber = (value: any): number => {
+  const toNumber = (value: unknown): number => {
     if (value === null || value === undefined) return 0;
     const num = Number(value);
     return isNaN(num) ? 0 : num;

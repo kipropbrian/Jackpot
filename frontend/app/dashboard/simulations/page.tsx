@@ -28,7 +28,7 @@ export default function SimulationsPage() {
   });
 
   // Helper function to safely convert to number and handle NaN
-  const toNumber = (value: any): number => {
+  const toNumber = (value: unknown): number => {
     if (value === null || value === undefined) return 0;
     const num = Number(value);
     return isNaN(num) ? 0 : num;
@@ -54,7 +54,7 @@ export default function SimulationsPage() {
 
   // Format status for display with appropriate color using enhanced status
   const getStatusBadge = (simulation: Simulation) => {
-    const statusToUse = simulation.enhanced_status || simulation.status;
+    const statusToUse: string = simulation.enhanced_status || simulation.status;
     let color = "";
     let displayText = "";
 

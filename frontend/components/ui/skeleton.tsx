@@ -38,7 +38,10 @@ export function SkeletonBadge({ className = "" }: { className?: string }) {
   );
 }
 
-export function SkeletonCard({ children, className = "" }: SkeletonProps) {
+export function SkeletonCard({
+  children,
+  className = "",
+}: SkeletonProps & { children?: React.ReactNode }) {
   return (
     <div className={`bg-white shadow rounded-lg ${className}`}>{children}</div>
   );

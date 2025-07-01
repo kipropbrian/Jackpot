@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { NotificationService } from "../api/services/notification-service";
 import { toast } from "react-hot-toast";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Notification } from "../api/types";
 
 export function useNotifications() {
@@ -17,22 +17,25 @@ export function useNotifications() {
     queryKey: ["notifications"],
     queryFn: NotificationService.getNotifications,
     staleTime: 30 * 1000, // 30 seconds
-    refetchInterval: (query) => {
+    refetchInterval: () => {
       // Check if we should poll more frequently for active simulations
       // We'll check the simulations cache to see if there are active ones
       const simulationsData = queryClient.getQueryData([
         "simulations",
         1,
         10,
-      ]) as { simulations?: any[] } | undefined;
+      ]) as { simulations?: Notification[] } | undefined;
 
       // If we have simulations data, check for active ones
       if (simulationsData?.simulations) {
         const hasActiveSimulations = simulationsData.simulations.some(
-          (sim: any) =>
-            sim.status === "running" ||
-            sim.enhanced_status === "analyzing" ||
-            sim.enhanced_status === "waiting_for_games"
+          (sim) =>
+            (sim as unknown as { status: string; enhanced_status: string })
+              .status === "running" ||
+            (sim as unknown as { status: string; enhanced_status: string })
+              .enhanced_status === "analyzing" ||
+            (sim as unknown as { status: string; enhanced_status: string })
+              .enhanced_status === "waiting_for_games"
         );
 
         // Poll more frequently when there are active simulations
@@ -46,7 +49,10 @@ export function useNotifications() {
     },
   });
 
-  const notifications = data?.notifications || [];
+  const notifications = useMemo(
+    () => data?.notifications || [],
+    [data?.notifications]
+  );
 
   // Check for new simulation-related notifications and invalidate simulations list
   useEffect(() => {

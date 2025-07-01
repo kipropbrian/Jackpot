@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { adminService } from "@/lib/api/services/admin-service";
-import { useJackpot } from "@/lib/hooks/use-jackpot";
 import SimulationResults from "@/components/simulation/SimulationResults";
 
 export default function AdminSimulationDetailsPage({
@@ -13,8 +10,6 @@ export default function AdminSimulationDetailsPage({
 }: {
   params: { id: string };
 }) {
-  const router = useRouter();
-
   // Use admin service to fetch simulation (bypasses user restrictions)
   const {
     data: simulation,
@@ -25,10 +20,6 @@ export default function AdminSimulationDetailsPage({
     queryFn: () => adminService.getSimulationDetails(params.id),
     staleTime: 5 * 60 * 1000,
   });
-
-  const { jackpot, loading: jackpotLoading } = useJackpot(
-    simulation?.jackpot_id
-  );
 
   // Format status for display with appropriate color
   const getStatusBadge = (status: string) => {
@@ -77,7 +68,7 @@ export default function AdminSimulationDetailsPage({
     );
   }
 
-  if (isLoading || jackpotLoading) {
+  if (isLoading) {
     return (
       <div className="animate-pulse">
         <div className="h-8 bg-gray-200 rounded mb-4"></div>
@@ -175,7 +166,7 @@ export default function AdminSimulationDetailsPage({
             </p>
           </div>
           <div className="border-t border-gray-200 px-4 py-5">
-            <SimulationResults simulation={simulation} jackpot={jackpot} />
+            <SimulationResults simulation={simulation} />
           </div>
         </div>
       )}

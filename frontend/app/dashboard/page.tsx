@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
-import { Simulation, Jackpot } from "@/lib/api/types";
+import { Simulation } from "@/lib/api/types";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
@@ -20,7 +20,7 @@ export default function DashboardPage() {
 
   const currentJackpot = useMemo(() => {
     if (!jackpots || jackpots.length === 0) return null;
-    return jackpots.find((j: any) => j.status === "open") || jackpots[0];
+    return jackpots.find((j) => j.status === "open") || jackpots[0];
   }, [jackpots]);
 
   const stats = useMemo(() => {
@@ -58,7 +58,7 @@ export default function DashboardPage() {
     );
 
     // Helper function to safely convert to number
-    const toNumber = (value: any): number => {
+    const toNumber = (value: unknown): number => {
       if (value === null || value === undefined) return 0;
       const num = Number(value);
       return isNaN(num) ? 0 : num;

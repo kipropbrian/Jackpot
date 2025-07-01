@@ -343,7 +343,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
       tripleCount > SPORTPESA_RULES.maxCombiningTriples
     ) {
       const gamesWithMultipleSelections = Object.entries(newSelections)
-        .filter(([_, selections]) => selections.length > 1)
+        .filter(([, selections]) => selections.length > 1)
         .map(([gameNumber, selections]) => {
           const gameIndex = parseInt(gameNumber) - 1;
           const game = games[gameIndex];

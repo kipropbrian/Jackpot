@@ -199,9 +199,9 @@ export default function SimulationDetailsPage({
               </h3>
               <div className="mt-2 text-sm text-orange-700">
                 <p>
-                  Your simulation is ready, but the jackpot "
-                  {simulation.jackpot_name || "Unknown"}" games are still in
-                  progress. Analysis will be available once all games are
+                  Your simulation is ready, but the jackpot &quot;
+                  {simulation.jackpot_name || "Unknown"}&quot; games are still
+                  in progress. Analysis will be available once all games are
                   completed.
                 </p>
               </div>
