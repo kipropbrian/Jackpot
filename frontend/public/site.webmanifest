@@ -1,0 +1,21 @@
+{
+  "name": "Gambling Awareness App",
+  "short_name": "Jackpot",
+  "description": "Understand the real odds of winning jackpots through simulation",
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#FFD700",
+  "background_color": "#FFA500",
+  "display": "standalone",
+  "start_url": "/"
+}
