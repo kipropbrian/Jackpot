@@ -8,27 +8,40 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Write SSH keys
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          host='brianmaiyo.dev'
-          ssh-keyscan -H brianmaiyo.dev > ~/.ssh/known_hosts
 
+    steps:
       - name: Checkout the code
         uses: actions/checkout@v3
 
-      - name: Deploy to Linux Apache server
+      - name: Setup SSH Key and Known Hosts
         run: |
-          ssh maiyo@brianmaiyo.dev << 'EOF'
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H brianmaiyo.dev >> ~/.ssh/known_hosts
+
+      - name: Start SSH Agent
+        run: |
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_rsa
+
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no maiyo@brianmaiyo.dev << 'EOF'
+            set -e  # fail fast if any command fails
+
+            echo "▶ Pulling latest code..."
             cd /var/www/Jackpot/
             git pull origin main
+
+            echo "▶ Installing frontend dependencies and building..."
             cd frontend
             npm install
             npm run build
-            pm2 restart jackpot-fronted
-            pm2 restart jackpot-backend
+
+            echo "▶ Restarting frontend and backend apps..."
+            pm2 restart jackpot-fronted || pm2 start npm --name jackpot-fronted -- start -- -p 3031
+            pm2 restart jackpot-backend || pm2 start run.py --name jackpot-backend --interpreter python3
+
+            echo "✅ Deployment complete."
           EOF
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
