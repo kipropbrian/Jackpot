@@ -9,19 +9,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup SSH Key and Known Hosts
+      - name: Write SSH keys
         run: |
-          mkdir -p ~/.ssh
+          install -m 600 -D /dev/null ~/.ssh/id_rsa
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H brianmaiyo.dev >> ~/.ssh/known_hosts
+          host='brianmaiyo.dev'
+          ssh-keyscan -H brianmaiyo.dev > ~/.ssh/known_hosts
 
       - name: Checkout the code
         uses: actions/checkout@v3
 
       - name: Deploy to Linux Apache server
         run: |
-          ssh -o StrictHostKeyChecking=no maiyo@brianmaiyo.dev << 'EOF'
+          ssh maiyo@brianmaiyo.dev << 'EOF'
             cd /var/www/Jackpot/
             git pull origin main
             cd frontend
@@ -30,3 +30,5 @@ jobs:
             pm2 restart jackpot-fronted
             pm2 restart jackpot-backend
           EOF
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
