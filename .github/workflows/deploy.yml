@@ -1,0 +1,47 @@
+name: Deploy Jackpot to brianmaiyo.dev Application
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write SSH keys
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          host='brianmaiyo.dev'
+          ssh-keyscan -H brianmaiyo.dev > ~/.ssh/known_hosts
+
+      - name: Checkout the code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Build the Next.js app
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Deploy to Linux Apache server
+        run: |
+          ssh maiyo@brianmaiyo.dev << 'EOF'
+            cd /var/www/Jackpot/
+            git pull origin main
+            cd frontend
+            npm install
+            npm run build
+            pm2 restart jackpot-fronted
+            pm2 restart jackpot-backend
+          EOF
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
