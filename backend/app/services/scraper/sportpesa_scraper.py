@@ -30,6 +30,7 @@ class SportPesaScraper:
         Initializes the SportPesa API scraper.
         No URL is needed at initialization as API endpoints are fixed.
         """
+        self.last_checked_jackpot_id = None
         pass
 
     def _fetch_jackpot_prizes(self) -> Optional[Dict[str, Any]]:
@@ -215,11 +216,35 @@ class SportPesaScraper:
         """
         Orchestrates fetching jackpot prize details and individual game data from their respective APIs.
         Combines the data into a single dictionary with comprehensive jackpot information.
+        If the jackpot is already complete in the database, skips the update.
         """
         jackpot_details = self._fetch_jackpot_prizes()
         
         if not jackpot_details:
             return None
+
+        # Check if jackpot exists and is complete
+        try:
+            from ...config.database import supabase
+            
+            # Store the jackpot ID we're checking
+            self.last_checked_jackpot_id = jackpot_details["jackpot_id"]
+            
+            jackpot_response = (
+                supabase.table("jackpots")
+                .select("status")
+                .eq("jackpot_api_id", jackpot_details["jackpot_id"])
+                .execute()
+            )
+            
+            if jackpot_response and jackpot_response.data:
+                status = jackpot_response.data[0].get("status")
+                if status == "completed":
+                    logger.info(f"Jackpot {jackpot_details['jackpot_id']} is already complete, skipping update")
+                    return None
+        except Exception as e:
+            logger.warning(f"Failed to check jackpot completion status: {e}")
+            # Continue if we can't check status - better than failing completely
 
         games_data = self._fetch_games_data(num_matches_expected=jackpot_details["total_matches"])
 

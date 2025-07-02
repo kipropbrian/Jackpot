@@ -28,7 +28,16 @@ def scrape_sportpesa_jackpot():
             logger.info(f"Successfully scraped jackpot data: {scraped_data.get('name', 'Unknown')} with {len(scraped_data.get('games', []))} games")
             logger.debug(f"Full scraped data: {scraped_data}")
         else:
-            logger.error("Scraper returned no data")
+            logger.info("No data to update - jackpot may be complete")
+            # Check if it was because the jackpot is complete
+            if hasattr(scraper, 'last_checked_jackpot_id'):
+                return {
+                    "message": f"Jackpot {scraper.last_checked_jackpot_id} is already complete, no update needed.",
+                    "status": "skipped"
+                }
+            else:
+                logger.error("Scraper returned no data")
+                raise HTTPException(status_code=404, detail="Failed to scrape SportPesa data or no data found.")
 
         if scraped_data:
             try:
