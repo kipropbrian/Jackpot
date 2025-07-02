@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSignUp } from "@/lib/hooks/use-auth-mutations";
+import { AuthError } from "@supabase/supabase-js";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -39,11 +40,43 @@ export default function RegisterForm() {
       await signUpMutation.mutateAsync({ email, password, fullName });
       router.push("/auth/confirmation"); // Redirect to confirmation page
     } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : "An error occurred during registration"
-      );
+      // Handle specific Supabase Auth errors
+      if (error instanceof AuthError) {
+        switch (error.status) {
+          case 400:
+            if (
+              error.message.toLowerCase().includes("already registered") ||
+              error.message.toLowerCase().includes("already exists") ||
+              error.message.toLowerCase().includes("email exists") ||
+              error.message.toLowerCase().includes("user already exists")
+            ) {
+              setFormError(
+                "This email is already registered. Please try logging in instead."
+              );
+            } else if (error.message.toLowerCase().includes("password")) {
+              setFormError(
+                "Password is too weak. Please use a stronger password."
+              );
+            } else if (error.message.toLowerCase().includes("email")) {
+              setFormError("Please enter a valid email address.");
+            } else {
+              setFormError(error.message);
+            }
+            break;
+          case 422:
+            setFormError("Invalid email or password format.");
+            break;
+          case 429:
+            setFormError("Too many attempts. Please try again later.");
+            break;
+          default:
+            setFormError(
+              "An error occurred during registration. Please try again."
+            );
+        }
+      } else {
+        setFormError("An unexpected error occurred. Please try again.");
+      }
     }
   };
 
