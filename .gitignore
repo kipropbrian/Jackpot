@@ -2,7 +2,9 @@
 node_modules
 .env
 .next
-.env.local
+.env.*
 *.pyc   
 errors.log 
 *.tsbuildinfo
+venv/
+venvbrew/
