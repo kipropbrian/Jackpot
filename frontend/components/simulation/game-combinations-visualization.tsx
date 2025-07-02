@@ -1,20 +1,9 @@
-import { BetSpecification } from "@/lib/api/types";
-
-interface Game {
-  home_team: string;
-  away_team: string;
-  tournament?: string;
-  odds_home?: number;
-  odds_draw?: number;
-  odds_away?: number;
-  score_home?: number;
-  score_away?: number;
-}
+import { BetSpecification, Game as APIGame } from "@/lib/api/types";
 
 interface GameCombinationsVisualizationProps {
   specification: BetSpecification | null;
   jackpotName?: string;
-  games?: Game[];
+  games?: APIGame[];
   actualResults?: string[];
 }
 
@@ -194,7 +183,8 @@ export function GameCombinationsVisualization({
                   {game && (
                     <div className="mb-3">
                       <div className="text-sm font-medium text-gray-900 mb-1">
-                        {game.home_team} vs {game.away_team}
+                        {game.home_team || "Home Team"} vs{" "}
+                        {game.away_team || "Away Team"}
                       </div>
                       {game.tournament && (
                         <div className="text-xs text-gray-500">

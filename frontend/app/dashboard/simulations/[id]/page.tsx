@@ -20,16 +20,18 @@ export default function SimulationDetailsPage({
 }) {
   const router = useRouter();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const { simulation, isLoading } = useSimulation(params.id);
-  const { jackpot, isLoading: isLoadingJackpot } = useJackpot(
+  const { simulation, loading: isLoadingSimulation } = useSimulation(params.id);
+  const { jackpot, loading: isLoadingJackpot } = useJackpot(
     simulation?.jackpot_id
   );
   const { deleteSimulation } = useSimulationMutations();
 
-  if (isLoading || isLoadingJackpot) {
+  // Show skeleton while loading simulation or jackpot data
+  if (isLoadingSimulation || (simulation && isLoadingJackpot)) {
     return <SimulationDetailsSkeleton />;
   }
 
+  // Only show not found after loading is complete
   if (!simulation) {
     return (
       <div className="p-4">
@@ -80,9 +82,9 @@ export default function SimulationDetailsPage({
 
       {/* Game Combinations */}
       <GameCombinationsVisualization
-        specification={simulation.specification}
+        specification={simulation.specification || null}
         jackpotName={jackpot?.name}
-        games={jackpot?.games}
+        games={jackpot?.games || []}
         actualResults={simulation.results?.analysis?.actual_results}
       />
 
@@ -91,7 +93,7 @@ export default function SimulationDetailsPage({
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
-        simulationName={simulation.name || "this simulation"}
+        simulation={simulation}
       />
     </div>
   );
