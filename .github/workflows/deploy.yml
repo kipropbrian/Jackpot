@@ -40,8 +40,8 @@ jobs:
             npm run build
 
             echo "▶ Restarting frontend and backend apps..."
-            pm2 restart jackpot-fronted || pm2 start npm --name jackpot-fronted -- start -- -p 3031
-            pm2 restart jackpot-backend || pm2 start run.py --name jackpot-backend --interpreter python3
+            pm2 restart jackpot-fronted
+            pm2 restart jackpot-backend
 
             echo "✅ Deployment complete."
           EOF
