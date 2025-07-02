@@ -1,13 +1,28 @@
 import { BetSpecification } from "@/lib/api/types";
 
+interface Game {
+  home_team: string;
+  away_team: string;
+  tournament?: string;
+  odds_home?: number;
+  odds_draw?: number;
+  odds_away?: number;
+  score_home?: number;
+  score_away?: number;
+}
+
 interface GameCombinationsVisualizationProps {
   specification: BetSpecification | null;
   jackpotName?: string;
+  games?: Game[];
+  actualResults?: string[];
 }
 
 export function GameCombinationsVisualization({
   specification,
   jackpotName,
+  games = [],
+  actualResults = [],
 }: GameCombinationsVisualizationProps) {
   if (!specification || !specification.game_selections) {
     return (
@@ -136,46 +151,94 @@ export function GameCombinationsVisualization({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {Object.entries(gameSelections)
             .sort(([a], [b]) => parseInt(a) - parseInt(b))
-            .map(([gameNumber, selections]) => (
-              <div
-                key={gameNumber}
-                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                {/* Game Header */}
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-medium text-gray-700">
-                    Game {gameNumber}
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${getSelectionBadgeColor(
-                      selections
-                    )}`}
-                  >
-                    {getSelectionTypeName(selections.length)}
-                  </span>
-                </div>
+            .map(([gameNumber, selections]) => {
+              const gameIndex = parseInt(gameNumber) - 1;
+              const game = games[gameIndex];
+              const actualResult = actualResults[gameIndex];
+              const isCorrect =
+                actualResult && selections.includes(actualResult);
 
-                {/* Selections */}
-                <div className="space-y-2">
-                  <div className="flex flex-wrap gap-1">
-                    {selections.map((selection) => (
-                      <span
-                        key={selection}
-                        className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getSelectionButtonColor(
-                          selection
-                        )}`}
-                      >
-                        {getSelectionDisplayName(selection)}
+              return (
+                <div
+                  key={gameNumber}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  {/* Game Header */}
+                  <div className="flex justify-between items-center mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-700">
+                        Game {gameNumber}
                       </span>
-                    ))}
+                      {actualResult && (
+                        <span
+                          className={`flex items-center justify-center w-5 h-5 rounded-full ${
+                            isCorrect
+                              ? "bg-green-100 text-green-600"
+                              : "bg-red-100 text-red-600"
+                          }`}
+                        >
+                          {isCorrect ? "✓" : "✗"}
+                        </span>
+                      )}
+                    </div>
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${getSelectionBadgeColor(
+                        selections
+                      )}`}
+                    >
+                      {getSelectionTypeName(selections.length)}
+                    </span>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {selections.length} selection
-                    {selections.length !== 1 ? "s" : ""}
+
+                  {/* Teams */}
+                  {game && (
+                    <div className="mb-3">
+                      <div className="text-sm font-medium text-gray-900 mb-1">
+                        {game.home_team} vs {game.away_team}
+                      </div>
+                      {game.tournament && (
+                        <div className="text-xs text-gray-500">
+                          {game.tournament}
+                        </div>
+                      )}
+                      {game.score_home !== undefined &&
+                        game.score_away !== undefined && (
+                          <div className="text-sm font-bold text-gray-900 mt-1">
+                            Score: {game.score_home} - {game.score_away}
+                          </div>
+                        )}
+                    </div>
+                  )}
+
+                  {/* Selections */}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {selections.map((selection) => (
+                        <div
+                          key={selection}
+                          className={`flex flex-col items-center px-3 py-2 rounded text-xs font-medium ${getSelectionButtonColor(
+                            selection
+                          )}`}
+                        >
+                          <span>{getSelectionDisplayName(selection)}</span>
+                          {game && (
+                            <span className="mt-1 opacity-90">
+                              {selection === "1" && game.odds_home
+                                ? game.odds_home.toFixed(2)
+                                : selection === "X" && game.odds_draw
+                                ? game.odds_draw.toFixed(2)
+                                : selection === "2" && game.odds_away
+                                ? game.odds_away.toFixed(2)
+                                : ""}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
         </div>
       </div>
 

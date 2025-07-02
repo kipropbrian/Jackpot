@@ -558,98 +558,94 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {jackpots
-                ?.filter((j) => j.status === "open" || isAdmin)
-                .map((jackpot) => (
-                  <div
-                    key={jackpot.id}
-                    onClick={() => setSelectedJackpot(jackpot)}
-                    className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                      selectedJackpot?.id === jackpot.id
-                        ? "border-blue-500 bg-blue-50 shadow-md"
-                        : errors.jackpot
-                        ? "border-red-300 hover:border-red-400"
-                        : "border-gray-200 hover:border-blue-300"
-                    }`}
-                  >
-                    {/* Jackpot Header */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          selectedJackpot?.id === jackpot.id
-                            ? "bg-blue-500 border-blue-500"
-                            : "border-gray-400"
-                        }`}
-                      >
-                        {selectedJackpot?.id === jackpot.id && (
-                          <svg
-                            className="w-3 h-3 text-white"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        )}
-                      </div>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          jackpot.status === "open"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {jackpot.status === "open" ? "Active" : "Completed"}
-                        {jackpot.status === "completed" &&
-                          isAdmin &&
-                          " (Admin)"}
-                      </span>
-                    </div>
-
-                    {/* Jackpot Name */}
-                    <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                      {jackpot.name}
-                    </h3>
-
-                    {/* Prize Amount */}
-                    <div className="mb-3">
-                      <span className="text-sm text-gray-600">Prize Pool</span>
-                      <div className="text-2xl font-bold text-green-600">
-                        {formatCurrency(jackpot.current_amount)}
-                      </div>
-                      {jackpot.metadata?.currency && (
-                        <span className="text-xs text-gray-500">
-                          {jackpot.metadata.currency}
-                        </span>
+              {jackpots.map((jackpot) => (
+                <div
+                  key={jackpot.id}
+                  onClick={() => setSelectedJackpot(jackpot)}
+                  className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                    selectedJackpot?.id === jackpot.id
+                      ? "border-blue-500 bg-blue-50 shadow-md"
+                      : errors.jackpot
+                      ? "border-red-300 hover:border-red-400"
+                      : "border-gray-200 hover:border-blue-300"
+                  }`}
+                >
+                  {/* Jackpot Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div
+                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        selectedJackpot?.id === jackpot.id
+                          ? "bg-blue-500 border-blue-500"
+                          : "border-gray-400"
+                      }`}
+                    >
+                      {selectedJackpot?.id === jackpot.id && (
+                        <svg
+                          className="w-3 h-3 text-white"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
                       )}
                     </div>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        jackpot.status === "open"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {jackpot.status === "open" ? "Active" : "Completed"}
+                      {jackpot.status === "completed" && isAdmin && " (Admin)"}
+                    </span>
+                  </div>
 
-                    {/* Games Count */}
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Games:</span>
-                      <span className="font-medium text-gray-900">
-                        {jackpot.total_matches} matches
-                      </span>
+                  {/* Jackpot Name */}
+                  <h3 className="font-semibold text-gray-900 mb-2 text-lg">
+                    {jackpot.name}
+                  </h3>
+
+                  {/* Prize Amount */}
+                  <div className="mb-3">
+                    <span className="text-sm text-gray-600">Prize Pool</span>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatCurrency(jackpot.current_amount)}
                     </div>
-
-                    {/* Bet Amount */}
-                    {jackpot.metadata?.bet_amounts && (
-                      <div className="flex items-center justify-between text-sm mt-1">
-                        <span className="text-gray-600">Cost per bet:</span>
-                        <span className="font-medium text-blue-600">
-                          {formatCurrency(
-                            jackpot.metadata.bet_amounts["17/17"] ||
-                              Object.values(jackpot.metadata.bet_amounts)[0] ||
-                              99
-                          )}
-                        </span>
-                      </div>
+                    {jackpot.metadata?.currency && (
+                      <span className="text-xs text-gray-500">
+                        {jackpot.metadata.currency}
+                      </span>
                     )}
                   </div>
-                ))}
+
+                  {/* Games Count */}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Games:</span>
+                    <span className="font-medium text-gray-900">
+                      {jackpot.total_matches} matches
+                    </span>
+                  </div>
+
+                  {/* Bet Amount */}
+                  {jackpot.metadata?.bet_amounts && (
+                    <div className="flex items-center justify-between text-sm mt-1">
+                      <span className="text-gray-600">Cost per bet:</span>
+                      <span className="font-medium text-blue-600">
+                        {formatCurrency(
+                          jackpot.metadata.bet_amounts["17/17"] ||
+                            Object.values(jackpot.metadata.bet_amounts)[0] ||
+                            99
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 

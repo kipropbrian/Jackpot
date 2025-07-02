@@ -112,8 +112,6 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
 
     if (!selectedJackpot) {
       errs.jackpot_id = "Please select a jackpot";
-    } else if (selectedJackpot.status === "completed" && !isAdmin) {
-      errs.jackpot_id = "Cannot create simulation for completed jackpots";
     }
 
     setErrors(errs);
