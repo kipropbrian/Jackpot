@@ -7,7 +7,7 @@ router = APIRouter()
 def list_jackpots_with_games():
     try:
         # Fetch all jackpots
-        jackpots_resp = supabase.table("jackpots").select("*").order("scraped_at", desc=True).execute()
+        jackpots_resp = supabase.table("jackpots").select("*").order("completed_at", desc=True).execute()
         if jackpots_resp is None or not jackpots_resp.data:
             return []
         return jackpots_resp.data or []
