@@ -233,16 +233,18 @@ export default function Home() {
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Total Spent:</span>
-                          <span className="text-white font-bold">$5,000</span>
+                          <span className="text-white font-bold">
+                            Ksh 5,000
+                          </span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Total Won:</span>
-                          <span className="text-white font-bold">$120</span>
+                          <span className="text-white font-bold">Ksh 120</span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-gray-400">Net Loss:</span>
                           <span className="text-red-400 font-bold">
-                            -$4,880
+                            -Ksh 4,880
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
