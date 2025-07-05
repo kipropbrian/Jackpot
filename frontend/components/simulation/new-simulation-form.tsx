@@ -556,7 +556,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {jackpots.map((jackpot) => (
+              {jackpots.slice(0, 3).map((jackpot) => (
                 <div
                   key={jackpot.id}
                   onClick={() => setSelectedJackpot(jackpot)}

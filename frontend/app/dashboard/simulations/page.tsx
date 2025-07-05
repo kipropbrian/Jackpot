@@ -138,14 +138,14 @@ export default function SimulationsPage() {
       <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
         <div>
           <h1 className="text-lg leading-6 font-medium text-gray-900">
-            My Simulations
+            My Bets
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-gray-500">
-            View and manage your jackpot simulations
+            View and manage your jackpot bets
           </p>
           {totalCount > 0 && (
             <p className="text-sm text-gray-500 mt-1">
-              Showing {simulations.length} of {totalCount} simulations
+              Showing {simulations.length} of {totalCount} bets
             </p>
           )}
         </div>
@@ -177,7 +177,7 @@ export default function SimulationsPage() {
             href="/dashboard/simulations/new"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            New Simulation
+            New Bet
           </Link>
         </div>
       </div>

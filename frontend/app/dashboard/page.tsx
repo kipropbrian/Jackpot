@@ -168,7 +168,64 @@ export default function DashboardPage() {
       </div>
       <div className="border-t border-gray-200">
         <div className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Quick Actions */}
+          <div>
+            <h2 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+              Quick Actions
+            </h2>
+            <div className="relative rounded-lg border-2 border-blue-500 bg-white px-8 py-6 shadow-md flex items-center space-x-4 hover:border-blue-600 hover:shadow-lg focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500 transition-all duration-200">
+              <div className="flex-shrink-0">
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <svg
+                    className="h-12 w-12 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <a
+                  href="/dashboard/simulations/new"
+                  className="focus:outline-none"
+                >
+                  <span className="absolute inset-0" aria-hidden="true" />
+                  <p className="text-xl font-semibold text-gray-900">
+                    Create New Bet
+                  </p>
+                  <p className="text-base text-gray-600 mt-1">
+                    {currentJackpot
+                      ? `Place a bet on the current jackpot`
+                      : "Run a new jackpot bet"}
+                  </p>
+                </a>
+              </div>
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-6 w-6 text-blue-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {/* Stats Card - Bets */}
             <div className="bg-blue-50 overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
@@ -399,77 +456,6 @@ export default function DashboardPage() {
                       </dd>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mt-8">
-            <h2 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-              Quick Actions
-            </h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-10 w-10 text-blue-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <a
-                    href="/dashboard/simulations/new"
-                    className="focus:outline-none"
-                  >
-                    <span className="absolute inset-0" aria-hidden="true" />
-                    <p className="text-sm font-medium text-gray-900">
-                      Create New Bet
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {currentJackpot
-                        ? `Place a bet on the current jackpot`
-                        : "Run a new jackpot bet"}
-                    </p>
-                  </a>
-                </div>
-              </div>
-
-              <div className="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-gray-400 focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-10 w-10 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <a href="/dashboard/jackpots" className="focus:outline-none">
-                    <span className="absolute inset-0" aria-hidden="true" />
-                    <p className="text-sm font-medium text-gray-900">
-                      View Current Jackpots
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      See all available jackpots and their details
-                    </p>
-                  </a>
                 </div>
               </div>
             </div>
