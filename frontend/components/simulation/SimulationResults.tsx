@@ -13,7 +13,14 @@ export default function SimulationResults({
         <h2 className="text-lg font-medium text-gray-900 mb-4">
           Results Analysis
         </h2>
-        <p className="text-gray-500">No results available yet.</p>
+        <div className="text-gray-600">
+          <p className="mb-2">
+            Results will be available after the final game has been played.
+          </p>
+          <p>
+            You will receive an email notification once the results are ready.
+          </p>
+        </div>
       </div>
     );
   }
