@@ -27,11 +27,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname === "/dashboard",
     },
     {
-      name: "Jackpots",
-      href: "/dashboard/jackpots",
-      current: pathname.startsWith("/dashboard/jackpots"),
-    },
-    {
       name: "Simulations",
       href: "/dashboard/simulations",
       current: pathname.startsWith("/dashboard/simulations"),
@@ -45,6 +40,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Admin navigation items for superadmins
   const adminNavigation = [
+    {
+      name: "Jackpots",
+      href: "/dashboard/jackpots",
+      current: pathname.startsWith("/dashboard/jackpots"),
+    },
     {
       name: "Admin Panel",
       href: "/admin",
