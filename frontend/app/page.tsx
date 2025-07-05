@@ -186,10 +186,10 @@ export default function Home() {
                   <span className="text-emerald-400">real chances</span> of
                   winning the jackpot
                 </p>
-                <p className="text-xl max-w-2xl mx-auto md:mx-0 text-gray-300 mb-8">
-                  Our advanced simulation engine runs thousands of virtual bets
-                  to show you what gambling companies don&apos;t want you to
-                  see.
+                <p className="text-lg text-gray-300 mb-8">
+                  Our advanced betting engine runs thousands of virtual bets to
+                  help you understand the real odds of winning before you spend
+                  your money.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center md:justify-start gap-4 mb-8">
                   <Link href="/dashboard">
@@ -197,8 +197,7 @@ export default function Home() {
                       size="lg"
                       className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-6 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
                     >
-                      Start Your Simulation{" "}
-                      <ArrowRight className="ml-2 h-5 w-5" />
+                      Start Betting <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
                   </Link>
                   <Link href="#how-it-works">
@@ -213,10 +212,9 @@ export default function Home() {
                 </div>
 
                 <div className="bg-gray-800/50 p-4 rounded-lg inline-block">
-                  <p className="text-amber-400 font-semibold flex items-center">
-                    <Award className="mr-2 h-5 w-5" /> Over 10,000 simulations
-                    run by users like you
-                  </p>
+                  <div className="flex items-center justify-center md:justify-start text-gray-300 mb-4">
+                    <Award className="mr-2 h-5 w-5" /> Over 10,000 bets analyzed
+                  </div>
                 </div>
               </motion.div>
 
@@ -226,9 +224,7 @@ export default function Home() {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-full max-w-md bg-gray-800/80 backdrop-blur-sm p-6 rounded-xl border border-gray-700 shadow-2xl">
                       <div className="mb-4 pb-4 border-b border-gray-700">
-                        <h3 className="text-lg font-medium text-gray-200">
-                          Simulation Results
-                        </h3>
+                        <h2 className="text-2xl font-bold mb-4">Bet Results</h2>
                       </div>
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
@@ -326,8 +322,8 @@ export default function Home() {
           className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-800/30"
         >
           <div className="max-w-7xl mx-auto">
-            <h2 className="text-4xl font-bold mb-16 text-center">
-              How Our Simulation Works
+            <h2 className="text-3xl font-bold text-center mb-12">
+              How Our Betting System Works
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
@@ -338,7 +334,7 @@ export default function Home() {
                 <h3 className="text-xl font-bold mb-4">Set Your Parameters</h3>
                 <p className="text-gray-300">
                   Choose your bet amount, number of tickets, and jackpot type to
-                  customize your simulation.
+                  customize your bet.
                 </p>
               </div>
 
@@ -377,13 +373,12 @@ export default function Home() {
             <div className="space-y-6">
               <div className="bg-gray-800/60 p-6 rounded-xl border border-gray-700">
                 <h3 className="text-xl font-bold mb-3">
-                  How accurate are the simulations?
+                  How accurate are the virtual bets?
                 </h3>
                 <p className="text-gray-300">
-                  Our simulations use the exact same odds and payout structures
-                  as real jackpot games. The results are statistically accurate
-                  representations of what you can expect in real-world gambling
-                  scenarios.
+                  Our virtual bets use the exact same odds and payout structures
+                  as the actual games. This ensures that our results accurately
+                  reflect real-world probabilities.
                 </p>
               </div>
 
@@ -392,9 +387,9 @@ export default function Home() {
                   Is this service free to use?
                 </h3>
                 <p className="text-gray-300">
-                  Yes! Our basic simulation features are completely free. We
-                  believe everyone should have access to this information before
-                  spending money on gambling.
+                  Yes! Our basic betting features are completely free. We
+                  believe in helping people understand the real odds before they
+                  spend their money.
                 </p>
               </div>
 
@@ -403,8 +398,9 @@ export default function Home() {
                   Can I simulate specific jackpot games?
                 </h3>
                 <p className="text-gray-300">
-                  Absolutely. Our platform supports simulations for most popular
-                  lottery and jackpot games with their specific rules and odds.
+                  Absolutely. Our platform supports virtual betting for most
+                  popular jackpot games. We regularly update our system to match
+                  any changes in game rules or structures.
                 </p>
               </div>
             </div>
@@ -418,16 +414,15 @@ export default function Home() {
               Ready to Face the Real Odds?
             </h2>
             <p className="text-xl mb-10">
-              Start your simulation today and get data-driven insights about
-              your gambling habits.
+              Start betting today and get data-driven insights about your
+              gambling habits.
             </p>
             <Link href="/dashboard">
               <Button
                 size="lg"
                 className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
               >
-                Create Your First Simulation{" "}
-                <ChevronRight className="ml-2 h-5 w-5" />
+                Place Your First Bet <ChevronRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
           </div>

@@ -27,7 +27,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       current: pathname === "/dashboard",
     },
     {
-      name: "Simulations",
+      name: "Bets",
       href: "/dashboard/simulations",
       current: pathname.startsWith("/dashboard/simulations"),
     },

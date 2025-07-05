@@ -7,33 +7,21 @@ interface DeleteConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
   simulation: Simulation | null;
-  onConfirm: (simulationId: string) => Promise<void>;
-  isDeleting?: boolean;
+  onConfirm: () => void;
+  isDeleting: boolean;
 }
 
-export function DeleteConfirmationModal({
+const DeleteConfirmationModal = ({
   isOpen,
   onClose,
   simulation,
   onConfirm,
-  isDeleting = false,
-}: DeleteConfirmationModalProps) {
-  const handleConfirm = async () => {
-    if (simulation) {
-      await onConfirm(simulation.id);
-      onClose();
-    }
-  };
-
+  isDeleting,
+}: DeleteConfirmationModalProps) => {
   if (!simulation) return null;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Delete Simulation"
-      size="md"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title="Delete Bet" size="md">
       <div className="space-y-4">
         {/* Warning Icon */}
         <div className="flex items-center space-x-3">
@@ -45,7 +33,7 @@ export function DeleteConfirmationModal({
           </div>
           <div>
             <h4 className="text-base font-medium text-gray-900">
-              Permanently delete simulation?
+              Permanently delete bet?
             </h4>
             <p className="text-sm text-gray-500">
               This action cannot be undone.
@@ -53,7 +41,7 @@ export function DeleteConfirmationModal({
           </div>
         </div>
 
-        {/* Simulation Details */}
+        {/* Bet Details */}
         <div className="bg-gray-50 rounded-lg p-4 space-y-2">
           <div className="flex justify-between">
             <span className="text-sm font-medium text-gray-600">Name:</span>
@@ -100,8 +88,8 @@ export function DeleteConfirmationModal({
             />
             <div className="text-sm text-red-800">
               <p>
-                <strong>Warning:</strong> This will permanently delete the
-                simulation and all associated data including:
+                <strong>Warning:</strong> This will permanently delete the bet
+                and all associated data including:
               </p>
               <ul className="mt-1 list-disc list-inside">
                 <li>All bet combinations and specifications</li>
@@ -124,7 +112,7 @@ export function DeleteConfirmationModal({
           </Button>
           <Button
             variant="destructive"
-            onClick={handleConfirm}
+            onClick={onConfirm}
             disabled={isDeleting}
             className="px-4 py-2"
           >
@@ -153,11 +141,13 @@ export function DeleteConfirmationModal({
                 Deleting...
               </>
             ) : (
-              "Delete Simulation"
+              "Delete Bet"
             )}
           </Button>
         </div>
       </div>
     </Modal>
   );
-}
+};
+
+export default DeleteConfirmationModal;

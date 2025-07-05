@@ -531,10 +531,8 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
     <div className="w-full bg-white rounded-xl shadow-lg overflow-hidden">
       <style dangerouslySetInnerHTML={{ __html: sliderStyles }} />
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-        <h2 className="text-2xl font-bold text-white">Create Simulation</h2>
-        <p className="text-blue-100 mt-2">
-          Create a bet simulation using SportPesa rules
-        </p>
+        <h2 className="text-2xl font-bold text-white">Create New Bet</h2>
+        <p className="text-blue-100 mt-2">Create a bet using SportPesa rules</p>
       </div>
 
       <form onSubmit={handleSubmit} className="p-8 space-y-8">
@@ -1159,10 +1157,10 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Creating Simulation...
+                Creating Bet...
               </span>
             ) : (
-              `Create Simulation${
+              `Create Bet${
                 validation && validation.is_valid
                   ? ` • ${formatCurrency(validation.total_cost)}`
                   : creationMethod === "budget" && selectedJackpot

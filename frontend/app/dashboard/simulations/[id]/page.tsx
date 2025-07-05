@@ -4,7 +4,7 @@ import { useState } from "react";
 import SimulationResults from "@/components/simulation/SimulationResults";
 import { GameCombinationsVisualization } from "@/components/simulation/game-combinations-visualization";
 import SimulationDetailsSkeleton from "@/components/simulation/simulation-details-skeleton";
-import { DeleteConfirmationModal } from "@/components/simulation/delete-confirmation-modal";
+import DeleteConfirmationModal from "@/components/simulation/delete-confirmation-modal";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,6 +20,7 @@ export default function SimulationDetailsPage({
 }) {
   const router = useRouter();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { simulation, loading: isLoadingSimulation } = useSimulation(params.id);
   const { jackpot, loading: isLoadingJackpot } = useJackpot(
     simulation?.jackpot_id
@@ -44,8 +45,14 @@ export default function SimulationDetailsPage({
   }
 
   const handleDelete = async () => {
-    await deleteSimulation(simulation.id);
-    router.push("/dashboard/simulations");
+    setIsDeleting(true);
+    try {
+      await deleteSimulation(simulation.id);
+      router.push("/dashboard/simulations");
+    } catch (error) {
+      console.error("Failed to delete simulation:", error);
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -71,7 +78,7 @@ export default function SimulationDetailsPage({
               onClick={() => setShowDeleteModal(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
-              Delete Simulation
+              Delete Bet
             </button>
           </div>
         </div>
@@ -94,6 +101,7 @@ export default function SimulationDetailsPage({
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDelete}
         simulation={simulation}
+        isDeleting={isDeleting}
       />
     </div>
   );

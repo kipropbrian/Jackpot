@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { Simulation } from "@/lib/api/types";
 import SimulationsListSkeleton from "@/components/simulation/simulations-list-skeleton";
-import { DeleteConfirmationModal } from "@/components/simulation/delete-confirmation-modal";
+import DeleteConfirmationModal from "@/components/simulation/delete-confirmation-modal";
 
 export default function SimulationsPage() {
   const {
@@ -382,7 +382,10 @@ export default function SimulationsPage() {
           isOpen={deleteModal.isOpen}
           onClose={handleCloseDeleteModal}
           simulation={deleteModal.simulation}
-          onConfirm={handleConfirmDelete}
+          onConfirm={() =>
+            deleteModal.simulation &&
+            handleConfirmDelete(deleteModal.simulation.id)
+          }
           isDeleting={isDeleting}
         />
       )}

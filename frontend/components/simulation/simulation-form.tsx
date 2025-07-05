@@ -167,9 +167,7 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
   return (
     <div className="w-full bg-white rounded-xl shadow-lg overflow-hidden">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6">
-        <h2 className="text-2xl font-bold text-white">
-          Create Jackpot Simulation
-        </h2>
+        <h2 className="text-2xl font-bold text-white">Create Jackpot Bet</h2>
         <p className="text-blue-100 mt-2">
           Simulate betting combinations and analyze potential outcomes
         </p>
@@ -241,9 +239,9 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
                     </h3>
                     <div className="mt-2 text-sm text-amber-700">
                       <p>
-                        You are creating a simulation for a completed jackpot.
-                        The analysis will run immediately since all game results
-                        are already available.
+                        You are creating a bet for a completed jackpot. The
+                        analysis will run immediately since all game results are
+                        already available.
                       </p>
                     </div>
                   </div>
@@ -309,8 +307,8 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
                     Prize Structure
                   </h3>
                   <p className="text-sm text-green-700 mb-6">
-                    Your simulation will test combinations against all games.
-                    Winnings depend on prediction accuracy:
+                    Your bet will test combinations against all games. Winnings
+                    depend on prediction accuracy:
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-5 gap-5">
                     {Object.entries(selectedJackpot.metadata.prizes)
@@ -474,7 +472,7 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
 
               <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="text-sm text-blue-800 leading-relaxed">
-                  <strong>How it works:</strong> The simulation will generate{" "}
+                  <strong>How it works:</strong> The bet will generate{" "}
                   {selectedCombinations.toLocaleString()} random betting
                   combinations. Each combination predicts outcomes for all{" "}
                   {selectedJackpot.total_matches} games. Winnings are calculated
@@ -523,10 +521,10 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   ></path>
                 </svg>
-                Creating Simulation...
+                Creating Bet...
               </span>
             ) : (
-              `Create Simulation${
+              `Create Bet${
                 selectedJackpot
                   ? ` • ${formatCurrency(
                       calculateTotalCost(),

@@ -106,14 +106,13 @@ export default function NotificationsPage() {
               No notifications yet
             </h3>
             <p className="text-gray-500 mb-4">
-              You&apos;ll receive notifications when your simulations complete
-              or encounter issues.
+              You&apos;ll receive notifications when your bets complete
             </p>
             <Link
               href="/dashboard/simulations/new"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
-              Run your first simulation
+              Place your first bet
             </Link>
           </div>
         ) : (
@@ -164,7 +163,7 @@ export default function NotificationsPage() {
                           className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          View simulation details →
+                          View bet details →
                         </Link>
                       </div>
                     ) : null;

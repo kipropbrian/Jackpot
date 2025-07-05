@@ -14,13 +14,13 @@ export default function NewSimulationPage() {
   // Handler for NewSimulationForm
   const handleSimulationSubmit = async (values: SimulationCreate) => {
     try {
-      console.log("Creating simulation with values:", values);
+      console.log("Creating bet with values:", values);
       const newSimulation = await createSimulation(values);
-      console.log("Simulation created successfully:", newSimulation);
+      console.log("Bet created successfully:", newSimulation);
       router.push(`/dashboard/simulations/${newSimulation.id}`);
     } catch (err) {
       // Error is handled by the hook, just prevent navigation
-      console.error("Failed to create simulation:", err);
+      console.error("Failed to create bet:", err);
     }
   };
 
@@ -30,11 +30,11 @@ export default function NewSimulationPage() {
         {/* Page Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold leading-6 text-gray-900">
-            Create New Simulation
+            Create New Bet
           </h1>
           <p className="mt-2 text-base text-gray-600">
-            Create a simulation using SportPesa rules with either budget-based
-            or interactive selection.
+            Create a bet using SportPesa rules with either budget-based or
+            interactive selection.
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export default function NewSimulationPage() {
               </div>
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">
-                  Failed to create simulation
+                  Failed to create bet
                 </h3>
                 <div className="mt-2 text-sm text-red-700">{createError}</div>
               </div>
@@ -65,7 +65,7 @@ export default function NewSimulationPage() {
           </div>
         )}
 
-        {/* Simulation Form */}
+        {/* Form */}
         <div className="mb-6">
           <NewSimulationForm onSubmit={handleSimulationSubmit} />
         </div>

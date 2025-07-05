@@ -26,9 +26,9 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     if (!simulations) {
       return {
-        totalSimulations: 0,
-        completedSimulations: 0,
-        runningSimulations: 0,
+        totalBets: 0,
+        completedBets: 0,
+        runningBets: 0,
         totalSpent: 0,
         totalWon: 0,
         averageWinRate: 0,
@@ -50,10 +50,10 @@ export default function DashboardPage() {
       sample: simulations[0],
     });
 
-    const completedSims = simulations.filter(
+    const completedBets = simulations.filter(
       (sim: Simulation) => sim.status === "completed"
     );
-    const runningSims = simulations.filter(
+    const runningBets = simulations.filter(
       (sim: Simulation) => sim.status === "running" || sim.status === "pending"
     );
 
@@ -68,14 +68,14 @@ export default function DashboardPage() {
       (sum: number, sim: Simulation) => sum + toNumber(sim.total_cost),
       0
     );
-    const totalWon = completedSims.reduce(
+    const totalWon = completedBets.reduce(
       (sum: number, sim: Simulation) =>
         sum + toNumber(sim.basic_results?.total_payout),
       0
     );
 
     // Calculate simulation-level win rate (percentage of simulations that won something)
-    const winningSimsCount = completedSims.reduce(
+    const winningBetsCount = completedBets.reduce(
       (count: number, sim: Simulation) => {
         const payout = toNumber(sim.basic_results?.total_payout);
         return count + (payout > 0 ? 1 : 0);
@@ -83,32 +83,32 @@ export default function DashboardPage() {
       0
     );
     const simulationWinRate =
-      completedSims.length > 0
-        ? (winningSimsCount / completedSims.length) * 100
+      completedBets.length > 0
+        ? (winningBetsCount / completedBets.length) * 100
         : 0;
 
     // Calculate net result (positive = profit, negative = loss)
     const netResult = totalWon - totalSpent;
 
     const finalStats = {
-      totalSimulations: simulations.length,
-      completedSimulations: completedSims.length,
-      runningSimulations: runningSims.length,
+      totalBets: simulations.length,
+      completedBets: completedBets.length,
+      runningBets: runningBets.length,
       totalSpent,
       totalWon,
       averageWinRate: simulationWinRate, // Now using simulation-level win rate
       bestWinRate: simulationWinRate, // For now, same as average
-      totalCombinations: completedSims.reduce(
+      totalCombinations: completedBets.reduce(
         (sum: number, sim: Simulation) =>
           sum + toNumber(sim.effective_combinations),
         0
       ),
-      winningCombinations: winningSimsCount, // This is clearer as winningSimsCount
+      winningCombinations: winningBetsCount, // This is clearer as winningBetsCount
       winningPercentage: simulationWinRate,
       totalPayout: totalWon,
       netLoss: Math.abs(netResult), // Always positive for display
       netResult: netResult, // Keep the actual result for logic
-      bestMatchCount: completedSims.reduce(
+      bestMatchCount: completedBets.reduce(
         (max: number, sim: Simulation) =>
           Math.max(max, toNumber(sim.basic_results?.best_match_count)),
         0
@@ -117,8 +117,8 @@ export default function DashboardPage() {
 
     console.log("Dashboard calculated stats:", {
       ...finalStats,
-      winCalculation: `${winningSimsCount}/${
-        completedSims.length
+      winCalculation: `${winningBetsCount}/${
+        completedBets.length
       } = ${simulationWinRate.toFixed(1)}%`,
       netCalculation: `${totalWon} - ${totalSpent} = ${netResult}`,
       isProfit: netResult >= 0,
@@ -169,7 +169,7 @@ export default function DashboardPage() {
       <div className="border-t border-gray-200">
         <div className="px-4 py-5 sm:p-6">
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Stats Card - Simulations */}
+            {/* Stats Card - Bets */}
             <div className="bg-blue-50 overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
@@ -191,10 +191,10 @@ export default function DashboardPage() {
                   <div className="ml-5 w-0 flex-1">
                     <dl>
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Total Simulations
+                        Total Bets
                       </dt>
                       <dd className="text-3xl font-semibold text-gray-900">
-                        {stats.totalSimulations}
+                        {stats.totalBets}
                       </dd>
                     </dl>
                   </div>
@@ -202,14 +202,22 @@ export default function DashboardPage() {
               </div>
               <div className="bg-blue-100 px-4 py-4 sm:px-6">
                 <div className="text-sm">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Completed:</span>
+                    <span className="font-medium">{stats.completedBets}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 mt-1">
+                    <span>Running:</span>
+                    <span className="font-medium">{stats.runningBets}</span>
+                  </div>
                   <a
                     href="/dashboard/simulations"
-                    className="font-medium text-blue-700 hover:text-blue-900"
+                    className="font-medium text-blue-700 hover:text-blue-900 block mt-2"
                   >
-                    View all simulations
-                    {stats.runningSimulations > 0 && (
+                    View all bets
+                    {stats.runningBets > 0 && (
                       <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                        {stats.runningSimulations} running
+                        {stats.runningBets} running
                       </span>
                     )}
                   </a>
@@ -338,7 +346,7 @@ export default function DashboardPage() {
                   <div className="bg-white overflow-hidden shadow rounded-lg">
                     <div className="px-4 py-5 sm:p-6">
                       <dt className="text-sm font-medium text-gray-500 truncate">
-                        Winning Simulations
+                        Winning Bets
                       </dt>
                       <dd className="mt-1 text-3xl font-semibold text-gray-900">
                         {stats.winningCombinations.toLocaleString()}
@@ -425,12 +433,12 @@ export default function DashboardPage() {
                   >
                     <span className="absolute inset-0" aria-hidden="true" />
                     <p className="text-sm font-medium text-gray-900">
-                      Create New Simulation
+                      Create New Bet
                     </p>
                     <p className="text-sm text-gray-500">
                       {currentJackpot
-                        ? `Simulate the ${currentJackpot.name} jackpot`
-                        : "Run a new jackpot simulation"}
+                        ? `Place a bet on the current jackpot`
+                        : "Run a new jackpot bet"}
                     </p>
                   </a>
                 </div>
