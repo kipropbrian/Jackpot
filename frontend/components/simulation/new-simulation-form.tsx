@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
 import { useJackpot } from "@/lib/hooks/use-jackpot";
-import { useIsAdmin } from "@/lib/hooks/use-admin";
 import {
   Jackpot,
   SimulationCreate,
@@ -76,12 +75,11 @@ const sliderStyles = `
 const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
   const { simulations } = useSimulations({ enablePolling: false }); // Disable polling - only used for name generation
   const { jackpots, loading: jackpotsLoading } = useJackpots();
-  const { isAdmin } = useIsAdmin();
 
   // Form state
   const [selectedJackpot, setSelectedJackpot] = useState<Jackpot | null>(null);
   const [creationMethod, setCreationMethod] =
-    useState<CreationMethod>("budget");
+    useState<CreationMethod>("interactive");
   const [budgetKsh, setBudgetKsh] = useState<number>(500);
   const [gameSelections, setGameSelections] = useState<GameSelectionState>({});
   const [submitting, setSubmitting] = useState(false);
@@ -94,6 +92,13 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
 
   // Fetch detailed jackpot data when a jackpot is selected
   const { jackpot: jackpotDetails } = useJackpot(selectedJackpot?.id);
+
+  // Auto-select the first jackpot when jackpots are loaded
+  useEffect(() => {
+    if (!jackpotsLoading && jackpots.length > 0 && !selectedJackpot) {
+      setSelectedJackpot(jackpots[0]);
+    }
+  }, [jackpotsLoading, jackpots, selectedJackpot]);
 
   // Auto-generate simulation name
   const generateSimulationName = (
@@ -536,174 +541,6 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="p-8 space-y-8">
-        {/* Jackpot Selection */}
-        <div>
-          <label className="block text-gray-700 font-semibold mb-4">
-            Select Jackpot
-          </label>
-
-          {jackpotsLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="p-6 border-2 border-gray-200 rounded-lg">
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-6 bg-gray-200 rounded w-1/2 mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-full"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {jackpots.slice(0, 3).map((jackpot) => (
-                <div
-                  key={jackpot.id}
-                  onClick={() => setSelectedJackpot(jackpot)}
-                  className={`p-6 rounded-lg border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
-                    selectedJackpot?.id === jackpot.id
-                      ? "border-blue-500 bg-blue-50 shadow-md"
-                      : errors.jackpot
-                      ? "border-red-300 hover:border-red-400"
-                      : "border-gray-200 hover:border-blue-300"
-                  }`}
-                >
-                  {/* Jackpot Header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div
-                      className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        selectedJackpot?.id === jackpot.id
-                          ? "bg-blue-500 border-blue-500"
-                          : "border-gray-400"
-                      }`}
-                    >
-                      {selectedJackpot?.id === jackpot.id && (
-                        <svg
-                          className="w-3 h-3 text-white"
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        jackpot.status === "open"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {jackpot.status === "open" ? "Active" : "Completed"}
-                      {jackpot.status === "completed" && isAdmin && " (Admin)"}
-                    </span>
-                  </div>
-
-                  {/* Jackpot Name */}
-                  <h3 className="font-semibold text-gray-900 mb-2 text-lg">
-                    {jackpot.name}
-                  </h3>
-
-                  {/* Prize Amount */}
-                  <div className="mb-3">
-                    <span className="text-sm text-gray-600">Prize Pool</span>
-                    <div className="text-2xl font-bold text-green-600">
-                      {formatCurrency(jackpot.current_amount)}
-                    </div>
-                    {jackpot.metadata?.currency && (
-                      <span className="text-xs text-gray-500">
-                        {jackpot.metadata.currency}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Games Count */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Games:</span>
-                    <span className="font-medium text-gray-900">
-                      {jackpot.total_matches} matches
-                    </span>
-                  </div>
-
-                  {/* Bet Amount */}
-                  {jackpot.metadata?.bet_amounts && (
-                    <div className="flex items-center justify-between text-sm mt-1">
-                      <span className="text-gray-600">Cost per bet:</span>
-                      <span className="font-medium text-blue-600">
-                        {formatCurrency(
-                          jackpot.metadata.bet_amounts["17/17"] ||
-                            Object.values(jackpot.metadata.bet_amounts)[0] ||
-                            99
-                        )}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* No Jackpots Message */}
-          {!jackpotsLoading &&
-            (!jackpots ||
-              jackpots.filter((j) => j.status === "open" || isAdmin).length ===
-                0) && (
-              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                <div className="text-gray-400 text-4xl mb-4">🎰</div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No Active Jackpots
-                </h3>
-                <p className="text-gray-500">
-                  There are currently no active jackpots available for
-                  simulation.
-                </p>
-              </div>
-            )}
-
-          {errors.jackpot && (
-            <p className="text-red-600 text-sm mt-3">{errors.jackpot}</p>
-          )}
-        </div>
-
-        {/* Admin Notice for Completed Jackpots */}
-        {selectedJackpot &&
-          selectedJackpot.status === "completed" &&
-          isAdmin && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <svg
-                    className="h-5 w-5 text-amber-400"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-amber-800">
-                    Admin Notice: Completed Jackpot
-                  </h3>
-                  <div className="mt-2 text-sm text-amber-700">
-                    <p>
-                      You are creating a simulation for a completed jackpot. The
-                      simulation will run immediately since all game results are
-                      already available.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
         {/* Creation Method Selection */}
         {selectedJackpot && (
           <div>
@@ -711,30 +548,6 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
               Creation Method
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                onClick={() => setCreationMethod("budget")}
-                className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                  creationMethod === "budget"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200"
-                }`}
-              >
-                <div className="flex items-center mb-3">
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                      creationMethod === "budget"
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-gray-400"
-                    }`}
-                  />
-                  <h3 className="font-semibold text-gray-800">Budget-Based</h3>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Set your budget and let the system optimize combination
-                  distribution
-                </p>
-              </div>
-
               <div
                 onClick={() => setCreationMethod("interactive")}
                 className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
@@ -757,6 +570,30 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                 </div>
                 <p className="text-sm text-gray-600">
                   Manually select predictions for each game with full control
+                </p>
+              </div>
+
+              <div
+                onClick={() => setCreationMethod("budget")}
+                className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
+                  creationMethod === "budget"
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-blue-200"
+                }`}
+              >
+                <div className="flex items-center mb-3">
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 mr-3 ${
+                      creationMethod === "budget"
+                        ? "bg-blue-500 border-blue-500"
+                        : "border-gray-400"
+                    }`}
+                  />
+                  <h3 className="font-semibold text-gray-800">Budget-Based</h3>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Set your budget and let the system optimize combination
+                  distribution
                 </p>
               </div>
             </div>
@@ -846,38 +683,6 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                     {formatCurrency(SPORTPESA_RULES.costPerBet)}
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* SportPesa Limits Info */}
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <h4 className="font-medium text-yellow-800 text-sm mb-2">
-                📋 SportPesa Mega Jackpot Pro Rules
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-yellow-700">
-                <div className="bg-yellow-100 p-2 rounded">
-                  <div className="font-medium mb-1">Doubles Only</div>
-                  <div>Max 10 doubles</div>
-                  <div className="text-yellow-600">= 1,024 combinations</div>
-                  <div className="font-medium">Cost: KSh 101,376</div>
-                </div>
-                <div className="bg-yellow-100 p-2 rounded">
-                  <div className="font-medium mb-1">Triples Only</div>
-                  <div>Max 5 triples</div>
-                  <div className="text-yellow-600">= 243 combinations</div>
-                  <div className="font-medium">Cost: KSh 24,057</div>
-                </div>
-                <div className="bg-yellow-100 p-2 rounded">
-                  <div className="font-medium mb-1">
-                    Mixed (Theoretical Max)
-                  </div>
-                  <div>5 doubles + 5 triples</div>
-                  <div className="text-yellow-600">= 7,776 combinations</div>
-                  <div className="font-medium">Cost: KSh 770,424</div>
-                </div>
-              </div>
-              <div className="mt-2 text-xs text-yellow-600 italic">
-                * All combinations at KSh 99 per bet as per SportPesa rules
               </div>
             </div>
           </div>
