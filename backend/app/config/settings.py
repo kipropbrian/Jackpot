@@ -19,7 +19,9 @@ DEBUG = ENVIRONMENT == "development"
 
 # CORS settings
 CORS_ORIGINS = [
-    "http://localhost:3000", "https://jackpot.brianmaiyo.dev" # Frontend URL
+    "http://localhost:3000",
+    "https://jackpot.brianmaiyo.dev",
+    "https://api.jackpot.brianmaiyo.dev"
 ]
 
 # Email settings
