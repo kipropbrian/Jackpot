@@ -4,7 +4,7 @@ import { toast } from "react-hot-toast";
 import { useEffect, useRef, useMemo } from "react";
 import { Notification } from "../api/types";
 
-export function useNotifications() {
+export function useNotifications(unreadOnly: boolean = true) {
   const queryClient = useQueryClient();
   const prevNotificationsRef = useRef<Notification[]>([]);
 
@@ -14,8 +14,8 @@ export function useNotifications() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: NotificationService.getNotifications,
+    queryKey: ["notifications", unreadOnly],
+    queryFn: () => NotificationService.getNotifications(unreadOnly),
     staleTime: 30 * 1000, // 30 seconds
     refetchInterval: () => {
       // Check if we should poll more frequently for active simulations

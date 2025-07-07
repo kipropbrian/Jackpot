@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from uuid import UUID
 
 from app.api.deps import get_current_user
@@ -15,15 +15,27 @@ router = APIRouter()
 @router.get("/", response_model=NotificationListResponse)
 async def get_notifications(
     current_user: dict = Depends(get_current_user),
+    unread_only: bool = False,
 ):
-    """Get all notifications for the current user."""
+    """Get notifications for the current user.
+    
+    Args:
+        unread_only: If True, only return unread notifications
+    """
     try:
-        # Get notifications for the user
-        response = supabase.table("notifications").select("*").eq("user_id", current_user["id"]).order("created_at", desc=True).limit(50).execute()
+        # Start building the query
+        query = supabase.table("notifications").select("*").eq("user_id", current_user["id"])
+        
+        # Add unread filter if requested
+        if unread_only:
+            query = query.eq("read", False)
+            
+        # Execute query with ordering and limit
+        response = query.order("created_at", desc=True).limit(50).execute()
         
         notifications = response.data or []
         
-        # Count unread notifications
+        # Count unread notifications (we still want this total regardless of filter)
         unread_count = sum(1 for n in notifications if not n.get("read", True))
         
         return NotificationListResponse(

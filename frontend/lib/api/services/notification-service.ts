@@ -4,10 +4,13 @@ import type { Notification, NotificationListResponse } from "../types";
 
 export const NotificationService = {
   /**
-   * Fetch all notifications for the current user
+   * Fetch notifications for the current user
+   * @param unreadOnly - If true, only fetch unread notifications
    */
-  getNotifications: async (): Promise<NotificationListResponse> => {
-    const response = await apiClient.get(API_ENDPOINTS.NOTIFICATIONS);
+  getNotifications: async (unreadOnly: boolean = false): Promise<NotificationListResponse> => {
+    const response = await apiClient.get(API_ENDPOINTS.NOTIFICATIONS, {
+      params: { unread_only: unreadOnly }
+    });
     return response.data;
   },
 
