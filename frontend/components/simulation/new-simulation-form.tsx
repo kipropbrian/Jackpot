@@ -1,17 +1,14 @@
 "use client";
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import CreationMethodToggle from "@/components/simulation/creation-method-toggle";
 import BudgetSection from "@/components/simulation/budget-section";
-import { useJackpots } from "@/lib/hooks/use-jackpots";
-import { useIsAdmin } from "@/lib/hooks/use-admin";
+import { useLatestJackpot } from "@/lib/hooks/use-jackpots";
 import {
   Jackpot,
   SimulationCreate,
-  SportPesaRules,
   GameSelectionValidation,
 } from "@/lib/api/types";
-import apiClient from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/lib/api/endpoints";
+import { validateGameSelections, SPORTPESA_RULES } from "@/lib/utils";
 
 export interface NewSimulationFormProps {
   onSubmit?: (values: SimulationCreate) => void;
@@ -23,15 +20,6 @@ type GameSelection = "1" | "X" | "2";
 interface GameSelectionState {
   [gameNumber: string]: GameSelection[];
 }
-
-// SportPesa rules (matching backend)
-const SPORTPESA_RULES: SportPesaRules = {
-  maxOnlyDoubles: 10,
-  maxOnlyTriples: 5,
-  maxCombiningDoubles: 9,
-  maxCombiningTriples: 5,
-  costPerBet: 99,
-};
 
 const sliderStyles = `
   .slider::-webkit-slider-thumb {
@@ -73,8 +61,9 @@ const sliderStyles = `
 `;
 
 const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
-  // We don't need simulations list for this form
-  const { jackpots, loading: jackpotsLoading } = useJackpots();
+  // Use the latest jackpot hook instead of jackpots list
+  const { jackpot: latestJackpot, loading: jackpotLoading } =
+    useLatestJackpot();
 
   // Form state
   const [selectedJackpot, setSelectedJackpot] = useState<Jackpot | null>(null);
@@ -90,23 +79,12 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
     null
   );
 
-  // Get selected jackpot from the cached jackpots list instead of making a separate API call
-  const jackpotDetails = selectedJackpot
-    ? (jackpots as Jackpot[]).find((j) => j.id === selectedJackpot.id)
-    : null;
-
-  // Auto-select the first jackpot when jackpots are loaded
+  // Auto-select the latest jackpot when loaded
   useEffect(() => {
-    // Only set initial jackpot during first mount to avoid unnecessary re-renders
-    if (
-      !jackpotsLoading &&
-      (jackpots as Jackpot[]).length > 0 &&
-      !selectedJackpot &&
-      typeof window !== "undefined"
-    ) {
-      setSelectedJackpot((jackpots as Jackpot[])[0]);
+    if (!jackpotLoading && latestJackpot && !selectedJackpot) {
+      setSelectedJackpot(latestJackpot);
     }
-  }, [jackpotsLoading, jackpots, selectedJackpot]); // Include all dependencies
+  }, [jackpotLoading, latestJackpot, selectedJackpot]);
 
   // Auto-generate simulation name based on selections
   const generateSimulationName = (
@@ -161,78 +139,29 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
         [gameNumber]: newSelections,
       };
 
-      let doubleCount = 0;
-      let tripleCount = 0;
-
-      Object.values(testGameSelections).forEach((selections) => {
-        if (selections.length === 2) doubleCount++;
-        if (selections.length === 3) tripleCount++;
-      });
-
-      // Check SportPesa rules
-      if (doubleCount > 0 && tripleCount > 0) {
-        // Mixed mode
-        return (
-          doubleCount <= SPORTPESA_RULES.maxCombiningDoubles &&
-          tripleCount <= SPORTPESA_RULES.maxCombiningTriples
-        );
-      } else if (doubleCount > 0) {
-        // Doubles only
-        return doubleCount <= SPORTPESA_RULES.maxOnlyDoubles;
-      } else if (tripleCount > 0) {
-        // Triples only
-        return tripleCount <= SPORTPESA_RULES.maxOnlyTriples;
-      }
-
-      return true;
+      const testValidation = validateGameSelections(testGameSelections);
+      return testValidation.is_valid;
     },
     [selectedJackpot, gameSelections, validation]
   );
 
-  // --- Debounced validation -------------------------------------------------
-  const validateGameSelections = useCallback(async () => {
-    if (!selectedJackpot) return;
-
-    try {
-      // Call validation API using the API client
-      // Send jackpot_id as query parameter and game_selections in body
-      const response = await apiClient.post(
-        `${API_ENDPOINTS.VALIDATE_SELECTIONS}?jackpot_id=${selectedJackpot.id}`,
-        {
-          game_selections: gameSelections,
-        }
-      );
-
-      if (response.data) {
-        setValidation(response.data);
-      }
-    } catch (error) {
-      console.error("Validation error:", error);
+  // Validate game selections locally
+  const validateSelections = useCallback(() => {
+    if (!selectedJackpot || Object.keys(gameSelections).length === 0) {
+      setValidation(null);
+      return;
     }
+
+    const result = validateGameSelections(gameSelections);
+    setValidation(result);
   }, [selectedJackpot, gameSelections]);
 
-  // Debounce wrapper to limit validation calls
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const scheduleValidation = useCallback(() => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
-    }
-    debounceTimeoutRef.current = setTimeout(() => {
-      validateGameSelections();
-    }, 400); // 400 ms debounce window
-  }, [validateGameSelections]);
-
-  // Trigger (debounced) validation when selections change
+  // Trigger validation when selections change
   useEffect(() => {
-    if (
-      creationMethod === "interactive" &&
-      selectedJackpot &&
-      Object.keys(gameSelections).length > 0
-    ) {
-      scheduleValidation();
+    if (creationMethod === "interactive" && selectedJackpot) {
+      validateSelections();
     }
-  }, [gameSelections, selectedJackpot, creationMethod, scheduleValidation]);
+  }, [gameSelections, selectedJackpot, creationMethod, validateSelections]);
 
   const toggleGameSelection = (
     gameNumber: string,
@@ -310,10 +239,10 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
 
   // Smart selection based on odds
   const smartSelections = () => {
-    if (!selectedJackpot || !jackpotDetails?.games) return;
+    if (!selectedJackpot || !latestJackpot?.games) return;
 
     const newSelections: GameSelectionState = {};
-    const games = jackpotDetails.games;
+    const games = latestJackpot.games;
 
     games.forEach((game, index) => {
       const gameNumber = (index + 1).toString();
@@ -553,8 +482,8 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
     return `KSh ${amount.toLocaleString()}`;
   };
 
-  // Get games data from detailed jackpot
-  const games = jackpotDetails?.games || [];
+  // Get games data directly from the selected jackpot
+  const games = selectedJackpot?.games || [];
 
   return (
     <div className="w-full bg-white rounded-xl shadow-lg overflow-hidden">
@@ -623,7 +552,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                 <button
                   type="button"
                   onClick={smartSelections}
-                  disabled={!jackpotDetails?.games}
+                  disabled={!latestJackpot?.games}
                   className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
                   title="Auto-select based on odds (lower odds = more likely)"
                 >
@@ -760,7 +689,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
             </div>
 
             {/* Loading state for games */}
-            {selectedJackpot && !jackpotDetails && (
+            {selectedJackpot && !latestJackpot && (
               <div className="text-center py-4 text-gray-500">
                 <div className="animate-pulse">Loading game details...</div>
               </div>

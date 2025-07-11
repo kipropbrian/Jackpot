@@ -28,3 +28,30 @@ export function useJackpots() {
     refetch,
   };
 }
+
+export function useLatestJackpot() {
+  const {
+    data: jackpot,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["latest-jackpot"],
+    queryFn: JackpotService.getLatestJackpot,
+    staleTime: 30 * 60 * 1000, // 30 minutes since jackpot data changes infrequently
+    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
+    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 5 * 60 * 1000,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+
+  return {
+    jackpot,
+    loading,
+    error: error?.message || null,
+    refetch,
+  };
+}

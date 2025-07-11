@@ -15,6 +15,7 @@ export const API_ENDPOINTS = {
   // Jackpot endpoints
   JACKPOTS: `${API_BASE}/jackpots/`,
   JACKPOT: (id: string) => `${API_BASE}/jackpots/${id}`,
+  LATEST_JACKPOT: `${API_BASE}/jackpots/latest`,
 
   // Notification endpoints
   NOTIFICATIONS: `${API_BASE}/notifications/`,

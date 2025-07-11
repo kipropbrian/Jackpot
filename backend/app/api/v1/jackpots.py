@@ -15,6 +15,31 @@ def list_jackpots_with_games():
         raise HTTPException(status_code=500, detail=f"Failed to fetch jackpots: {str(e)}")
 
 
+@router.get("/latest", summary="Get the latest jackpot with games")
+def get_latest_jackpot():
+    try:
+        # Fetch the latest jackpot
+        jp_resp = supabase.table("jackpots").select("*").order("completed_at", desc=True).limit(1).single().execute()
+        if jp_resp is None or jp_resp.data is None:
+            raise HTTPException(status_code=404, detail="No jackpots found")
+        
+        jackpot = jp_resp.data
+        # Fetch games for this jackpot
+        games_resp = (
+            supabase.table("games")
+            .select("*")
+            .eq("jackpot_id", jackpot["id"])
+            .order("game_order")
+            .execute()
+        )
+        jackpot["games"] = games_resp.data if games_resp and games_resp.data else []
+        return jackpot
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch latest jackpot: {str(e)}")
+
+
 # -------------------------------------------------------------------
 # Single jackpot endpoint
 # -------------------------------------------------------------------

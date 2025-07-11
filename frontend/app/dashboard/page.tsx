@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
 import { Simulation, Jackpot } from "@/lib/api/types";
@@ -193,7 +194,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div className="flex-1 min-w-0">
-                <a
+                <Link
                   href="/dashboard/simulations/new"
                   className="focus:outline-none"
                 >
@@ -206,7 +207,7 @@ export default function DashboardPage() {
                       ? `Place a bet on the current jackpot`
                       : "Run a new jackpot bet"}
                   </p>
-                </a>
+                </Link>
               </div>
               <div className="flex-shrink-0">
                 <svg
@@ -268,7 +269,7 @@ export default function DashboardPage() {
                     <span>Running:</span>
                     <span className="font-medium">{stats.runningBets}</span>
                   </div>
-                  <a
+                  <Link
                     href="/dashboard/simulations"
                     className="font-medium text-blue-700 hover:text-blue-900 block mt-2"
                   >
@@ -278,7 +279,7 @@ export default function DashboardPage() {
                         {stats.runningBets} running
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -318,7 +319,7 @@ export default function DashboardPage() {
               </div>
               <div className="bg-green-100 px-4 py-4 sm:px-6">
                 <div className="text-sm">
-                  <a
+                  <Link
                     href="/dashboard/jackpots"
                     className="font-medium text-green-700 hover:text-green-900"
                   >
@@ -334,7 +335,7 @@ export default function DashboardPage() {
                         {currentJackpot.status === "open" ? "Active" : "Closed"}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -372,12 +373,12 @@ export default function DashboardPage() {
               </div>
               <div className="bg-purple-100 px-4 py-4 sm:px-6">
                 <div className="text-sm">
-                  <a
+                  <Link
                     href="/dashboard/simulations/new"
                     className="font-medium text-purple-700 hover:text-purple-900"
                   >
                     Run a new simulation
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>

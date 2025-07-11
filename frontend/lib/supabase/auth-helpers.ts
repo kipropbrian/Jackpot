@@ -23,7 +23,7 @@ export const getUser = async (): Promise<User | null> => {
 };
 
 /**
- * Get user profile including role - uses RPC to bypass RLS recursion
+ * Get user profile including role - tries to use metadata first, falls back to RPC
  */
 export const getUserProfile = async (
   user?: User | null
@@ -34,7 +34,24 @@ export const getUserProfile = async (
 } | null> => {
   if (!user) return null;
 
-  // Use RPC function to get user profile to avoid RLS recursion
+  // Try to get profile info from user metadata first
+  const metadata = user.user_metadata || {};
+  const appMetadata = user.app_metadata || {};
+
+  // If we have all the required info in metadata, use that
+  if (
+    appMetadata.role &&
+    metadata.full_name !== undefined &&
+    appMetadata.is_active !== undefined
+  ) {
+    return {
+      role: appMetadata.role,
+      full_name: metadata.full_name || "",
+      is_active: appMetadata.is_active,
+    };
+  }
+
+  // Fall back to RPC if metadata is incomplete
   const { data, error } = await supabase.rpc("get_user_profile", {
     user_id: user.id,
   });

@@ -42,9 +42,11 @@ export function useAuth() {
         profile,
       };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours - profile data rarely changes
+    gcTime: Infinity, // Keep in cache forever until explicitly invalidated
     refetchOnMount: false, // Don't refetch on every mount
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnReconnect: false, // Don't refetch on reconnect
     retry: 1,
   });
 
