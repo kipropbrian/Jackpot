@@ -58,7 +58,7 @@ export function validateGameSelections(gameSelections: {
 
   // Validate against rules
   let isValid = true;
-  let errors: string[] = [];
+  const errors: string[] = [];
 
   // Determine combination type
   let combinationType: "singles" | "doubles" | "triples" | "mixed" = "singles";

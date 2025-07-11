@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  compiler: {
+  typescript: {
     // Suppress the Grammarly extension warnings
     ignoreBuildErrors: true,
   },
