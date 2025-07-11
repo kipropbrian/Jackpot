@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
+import { Jackpot } from "@/lib/api/types";
 import Link from "next/link";
 import AdminJackpotGuard from "@/components/admin/admin-jackpot-guard";
 
@@ -38,10 +39,10 @@ const JackpotsPage: React.FC = () => {
           {error && (
             <div className="text-red-400 font-semibold">Error: {error}</div>
           )}
-          {!loading && !error && jackpots.length === 0 && (
+          {!loading && !error && (jackpots as Jackpot[]).length === 0 && (
             <div className="text-gray-600 text-lg">No jackpots available.</div>
           )}
-          {!loading && !error && jackpots.length > 0 && (
+          {!loading && !error && (jackpots as Jackpot[]).length > 0 && (
             <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
               <table className="min-w-full text-sm">
                 <thead>
@@ -59,7 +60,7 @@ const JackpotsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {jackpots.map((jackpot, idx) => (
+                  {(jackpots as Jackpot[]).map((jackpot, idx) => (
                     <tr
                       key={jackpot.id}
                       className={

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useSimulations } from "@/lib/hooks/use-simulations";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
-import { Simulation } from "@/lib/api/types";
+import { Simulation, Jackpot } from "@/lib/api/types";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 
 export default function DashboardPage() {
@@ -19,8 +19,9 @@ export default function DashboardPage() {
   const { jackpots, loading: isJackpotsLoading } = useJackpots();
 
   const currentJackpot = useMemo(() => {
-    if (!jackpots || jackpots.length === 0) return null;
-    return jackpots.find((j) => j.status === "open") || jackpots[0];
+    const typedJackpots = jackpots as Jackpot[];
+    if (!typedJackpots || typedJackpots.length === 0) return null;
+    return typedJackpots.find((j) => j.status === "open") || typedJackpots[0];
   }, [jackpots]);
 
   const stats = useMemo(() => {

@@ -16,7 +16,9 @@ export function useNotifications(unreadOnly: boolean = true) {
   } = useQuery({
     queryKey: ["notifications", unreadOnly],
     queryFn: () => NotificationService.getNotifications(unreadOnly),
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 5 * 60 * 1000, // 5 minutes - increased to reduce unnecessary fetches
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: false, // Don't refetch on every mount
     refetchInterval: () => {
       // Check if we should poll more frequently for active simulations
       // We'll check the simulations cache to see if there are active ones
@@ -44,8 +46,8 @@ export function useNotifications(unreadOnly: boolean = true) {
         }
       }
 
-      // Otherwise, poll every minute (default)
-      return 60 * 1000; // 1 minute
+      // Otherwise, poll less frequently
+      return 5 * 60 * 1000; // 5 minutes
     },
   });
 

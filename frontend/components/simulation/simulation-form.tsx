@@ -87,7 +87,8 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
 
   const handleJackpotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const jackpotId = e.target.value;
-    const jackpot = jackpots?.find((j) => j.id === jackpotId) || null;
+    const jackpot =
+      (jackpots as Jackpot[])?.find((j) => j.id === jackpotId) || null;
     setSelectedJackpot(jackpot);
     setErrors({});
   };
@@ -188,8 +189,8 @@ const SimulationForm: React.FC<SimulationFormProps> = ({ onSubmit }) => {
             disabled={jackpotsLoading}
           >
             <option value="">Choose a jackpot to simulate...</option>
-            {jackpots &&
-              jackpots
+            {Array.isArray(jackpots) &&
+              (jackpots as Jackpot[])
                 .filter((jackpot) => jackpot.status === "open" || isAdmin)
                 .map((jackpot) => (
                   <option key={jackpot.id} value={jackpot.id}>

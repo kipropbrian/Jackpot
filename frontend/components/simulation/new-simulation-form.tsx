@@ -1,14 +1,14 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
-import { useSimulations } from "@/lib/hooks/use-simulations";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import CreationMethodToggle from "@/components/simulation/creation-method-toggle";
+import BudgetSection from "@/components/simulation/budget-section";
 import { useJackpots } from "@/lib/hooks/use-jackpots";
-import { useJackpot } from "@/lib/hooks/use-jackpot";
+import { useIsAdmin } from "@/lib/hooks/use-admin";
 import {
   Jackpot,
   SimulationCreate,
   SportPesaRules,
   GameSelectionValidation,
-  Simulation,
 } from "@/lib/api/types";
 import apiClient from "@/lib/api/client";
 import { API_ENDPOINTS } from "@/lib/api/endpoints";
@@ -73,7 +73,7 @@ const sliderStyles = `
 `;
 
 const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
-  const { simulations } = useSimulations({ enablePolling: false }); // Disable polling - only used for name generation
+  // We don't need simulations list for this form
   const { jackpots, loading: jackpotsLoading } = useJackpots();
 
   // Form state
@@ -90,33 +90,44 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
     null
   );
 
-  // Fetch detailed jackpot data when a jackpot is selected
-  const { jackpot: jackpotDetails } = useJackpot(selectedJackpot?.id);
+  // Get selected jackpot from the cached jackpots list instead of making a separate API call
+  const jackpotDetails = selectedJackpot
+    ? (jackpots as Jackpot[]).find((j) => j.id === selectedJackpot.id)
+    : null;
 
   // Auto-select the first jackpot when jackpots are loaded
   useEffect(() => {
-    if (!jackpotsLoading && jackpots.length > 0 && !selectedJackpot) {
-      setSelectedJackpot(jackpots[0]);
+    // Only set initial jackpot during first mount to avoid unnecessary re-renders
+    if (
+      !jackpotsLoading &&
+      (jackpots as Jackpot[]).length > 0 &&
+      !selectedJackpot &&
+      typeof window !== "undefined"
+    ) {
+      setSelectedJackpot((jackpots as Jackpot[])[0]);
     }
-  }, [jackpotsLoading, jackpots, selectedJackpot]);
+  }, [jackpotsLoading, jackpots, selectedJackpot]); // Include all dependencies
 
-  // Auto-generate simulation name
+  // Auto-generate simulation name based on selections
   const generateSimulationName = (
     jackpot: Jackpot | null,
-    method: CreationMethod
+    combinations: number
   ): string => {
     if (!jackpot) return "";
 
     const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10);
-    const todaysCount = simulations.filter(
-      (sim: Simulation) =>
-        sim.created_at && sim.created_at.slice(0, 10) === dateStr
-    ).length;
-    const sequenceNumber = (todaysCount + 1).toString().padStart(2, "0");
+    const dateStr = today.toISOString().slice(0, 10); // YYYY-MM-DD
+    // Simplified name generation without depending on simulations list
+    const shortId = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
 
-    const methodCode = method === "budget" ? "BUD" : "INT";
-    return `SIM${sequenceNumber}-${dateStr}-${methodCode}`;
+    const combinationsShort =
+      combinations >= 1000
+        ? `${combinations / 1000}K`
+        : combinations.toString();
+
+    return `SIM${shortId}-${dateStr}-MEGA-${combinationsShort}`;
   };
 
   // Initialize game selections for selected jackpot
@@ -178,6 +189,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
     [selectedJackpot, gameSelections, validation]
   );
 
+  // --- Debounced validation -------------------------------------------------
   const validateGameSelections = useCallback(async () => {
     if (!selectedJackpot) return;
 
@@ -199,16 +211,28 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
     }
   }, [selectedJackpot, gameSelections]);
 
-  // Validate interactive selections
+  // Debounce wrapper to limit validation calls
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const scheduleValidation = useCallback(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      validateGameSelections();
+    }, 400); // 400 ms debounce window
+  }, [validateGameSelections]);
+
+  // Trigger (debounced) validation when selections change
   useEffect(() => {
     if (
       creationMethod === "interactive" &&
       selectedJackpot &&
       Object.keys(gameSelections).length > 0
     ) {
-      validateGameSelections();
+      scheduleValidation();
     }
-  }, [gameSelections, selectedJackpot, creationMethod, validateGameSelections]);
+  }, [gameSelections, selectedJackpot, creationMethod, scheduleValidation]);
 
   const toggleGameSelection = (
     gameNumber: string,
@@ -479,7 +503,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
       if (onSubmit && selectedJackpot) {
         const simulationName = generateSimulationName(
           selectedJackpot,
-          creationMethod
+          validation?.total_combinations || 0
         );
 
         const createData: SimulationCreate = {
@@ -541,151 +565,24 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="p-8 space-y-8">
-        {/* Creation Method Selection */}
+        {/* --- Refactored creation method toggle --- */}
         {selectedJackpot && (
-          <div>
-            <label className="block text-gray-700 font-semibold mb-4">
-              Creation Method
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                onClick={() => setCreationMethod("interactive")}
-                className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                  creationMethod === "interactive"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200"
-                }`}
-              >
-                <div className="flex items-center mb-3">
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                      creationMethod === "interactive"
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-gray-400"
-                    }`}
-                  />
-                  <h3 className="font-semibold text-gray-800">
-                    Interactive Selection
-                  </h3>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Manually select predictions for each game with full control
-                </p>
-              </div>
-
-              <div
-                onClick={() => setCreationMethod("budget")}
-                className={`p-6 rounded-lg border-2 cursor-pointer transition-all ${
-                  creationMethod === "budget"
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-200"
-                }`}
-              >
-                <div className="flex items-center mb-3">
-                  <div
-                    className={`w-4 h-4 rounded-full border-2 mr-3 ${
-                      creationMethod === "budget"
-                        ? "bg-blue-500 border-blue-500"
-                        : "border-gray-400"
-                    }`}
-                  />
-                  <h3 className="font-semibold text-gray-800">Budget-Based</h3>
-                </div>
-                <p className="text-sm text-gray-600">
-                  Set your budget and let the system optimize combination
-                  distribution
-                </p>
-              </div>
-            </div>
-          </div>
+          <CreationMethodToggle
+            creationMethod={creationMethod}
+            onChange={setCreationMethod}
+          />
         )}
 
-        {/* Budget Method */}
+        {/* --- Refactored budget section --- */}
         {selectedJackpot && creationMethod === "budget" && (
-          <div>
-            <label className="block text-gray-700 font-semibold mb-3">
-              Budget: {formatCurrency(budgetKsh)}
-            </label>
-
-            {/* Budget Slider */}
-            <div className="space-y-4">
-              <input
-                type="range"
-                min={SPORTPESA_RULES.costPerBet}
-                max={770424} // SportPesa theoretical max: 7,776 combinations (5 doubles + 5 triples)
-                step={SPORTPESA_RULES.costPerBet}
-                value={budgetKsh}
-                onChange={(e) => setBudgetKsh(Number(e.target.value))}
-                className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-              />
-
-              {/* Slider Labels */}
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>KSh 99 (1 bet)</span>
-                <span>KSh 770,424 (7,776 bets - SportPesa Max)</span>
-              </div>
-
-              {/* Quick Preset Buttons - Based on SportPesa Rules */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { label: "1 Bet", value: 99, desc: "Single bet" },
-                  { label: "243 Bets", value: 24057, desc: "Max 5 triples" },
-                  {
-                    label: "1,024 Bets",
-                    value: 101376,
-                    desc: "Max 10 doubles",
-                  },
-                  {
-                    label: "7,776 Bets",
-                    value: 770424,
-                    desc: "Theoretical max",
-                  },
-                ].map((preset) => (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    onClick={() => setBudgetKsh(preset.value)}
-                    className={`px-3 py-2 text-xs rounded-lg border transition-colors ${
-                      budgetKsh === preset.value
-                        ? "bg-blue-500 text-white border-blue-500"
-                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                    }`}
-                    title={preset.desc}
-                  >
-                    <div className="font-medium">{preset.label}</div>
-                    <div className="text-xs opacity-75 mt-1">
-                      {formatCurrency(preset.value)}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {errors.budget && (
-              <p className="text-red-600 text-sm mt-2">{errors.budget}</p>
-            )}
-
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-blue-900">
-                    Combinations:
-                  </span>
-                  <div className="text-2xl font-bold text-blue-700">
-                    {calculateBudgetCombinations()}
-                  </div>
-                </div>
-                <div>
-                  <span className="font-medium text-blue-900">
-                    Cost per bet:
-                  </span>
-                  <div className="text-lg font-semibold text-blue-700">
-                    {formatCurrency(SPORTPESA_RULES.costPerBet)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <BudgetSection
+            budgetKsh={budgetKsh}
+            setBudgetKsh={setBudgetKsh}
+            errors={errors}
+            calculateCombinations={calculateBudgetCombinations}
+            formatCurrency={formatCurrency}
+            RULES={SPORTPESA_RULES}
+          />
         )}
 
         {/* Interactive Method */}

@@ -7,7 +7,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { signOut } from "@/lib/supabase/auth-helpers";
 import { useQueryClient } from "@tanstack/react-query";
-import NotificationBell from "@/components/notifications/notification-bell";
+import dynamic from "next/dynamic";
+
+// Load notification bell on the client only, after main bundle
+const NotificationBell = dynamic(
+  () => import("@/components/notifications/notification-bell"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-6 w-6 animate-pulse bg-gray-200 rounded-full" />
+    ),
+  }
+);
 
 interface DashboardLayoutProps {
   children: ReactNode;

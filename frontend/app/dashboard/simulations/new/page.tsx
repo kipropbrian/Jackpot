@@ -1,15 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useSimulations } from "@/lib/hooks/use-simulations";
-import NewSimulationForm from "@/components/simulation/new-simulation-form";
+import { useSimulationMutations } from "@/lib/hooks/use-simulations";
+import dynamic from "next/dynamic";
 import { SimulationCreate } from "@/lib/api/types";
+
+// Lazy-load the heavy form component so it’s only fetched when this page is visited
+const NewSimulationForm = dynamic(
+  () => import("@/components/simulation/new-simulation-form"),
+  {
+    loading: () => <p>Loading form…</p>,
+    ssr: false, // Render on client only to avoid adding it to the server bundle
+  }
+);
 
 export default function NewSimulationPage() {
   const router = useRouter();
-  const { createSimulation, createError } = useSimulations({
-    enablePolling: false, // Disable polling since we're only using create function
-  });
+  const { createSimulation, createError } = useSimulationMutations();
 
   // Handler for NewSimulationForm
   const handleSimulationSubmit = async (values: SimulationCreate) => {

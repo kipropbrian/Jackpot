@@ -17,12 +17,9 @@ export const getSession = async (): Promise<Session | null> => {
  * Get the current user
  */
 export const getUser = async (): Promise<User | null> => {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) {
-    console.error("Error getting user:", error.message);
-    return null;
-  }
-  return data.user;
+  // Get user from session to avoid extra API call
+  const session = await getSession();
+  return session?.user || null;
 };
 
 /**
@@ -35,13 +32,11 @@ export const getUserProfile = async (
   full_name: string;
   is_active: boolean;
 } | null> => {
-  // If no user provided, fetch it (for backward compatibility)
-  const currentUser = user || (await getUser());
-  if (!currentUser) return null;
+  if (!user) return null;
 
   // Use RPC function to get user profile to avoid RLS recursion
   const { data, error } = await supabase.rpc("get_user_profile", {
-    user_id: currentUser.id,
+    user_id: user.id,
   });
 
   if (error) {

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { getUser, getSession, getUserProfile } from "../supabase/auth-helpers";
+import { getUserProfile } from "../supabase/auth-helpers";
 import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "../supabase/client";
 
 interface AuthData {
   user: User | null;
@@ -17,14 +18,33 @@ export function useAuth() {
   } = useQuery({
     queryKey: ["auth"],
     queryFn: async (): Promise<AuthData> => {
-      const [user, session] = await Promise.all([getUser(), getSession()]);
+      // Get session first - it contains the user object
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
 
-      // Only fetch profile if we have a user, and pass the user to avoid duplicate getUser call
-      const profile = user ? await getUserProfile(user) : null;
+      if (sessionError) {
+        console.error("Error getting session:", sessionError.message);
+        return { user: null, session: null, profile: null };
+      }
 
-      return { user, session, profile };
+      if (!session?.user) {
+        return { user: null, session: null, profile: null };
+      }
+
+      // Only fetch profile if needed - use session.user to avoid extra API call
+      const profile = await getUserProfile(session.user);
+
+      return {
+        user: session.user,
+        session,
+        profile,
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: false, // Don't refetch on every mount
     retry: 1,
   });
 
