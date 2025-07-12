@@ -562,7 +562,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
             </div>
 
             {/* Game Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="space-y-2">
               {Array.from(
                 { length: selectedJackpot.total_matches || 17 },
                 (_, i) => {
@@ -573,50 +573,45 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                   return (
                     <div
                       key={gameNumber}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white"
+                      className="border border-gray-200 rounded-lg p-2 hover:shadow-sm transition-shadow bg-white flex flex-col sm:flex-row sm:items-center gap-2"
                     >
-                      {/* Game Header */}
-                      <div className="flex justify-between items-center mb-3">
-                        <span className="font-medium text-gray-700 text-sm">
-                          Game {gameNumber}
-                        </span>
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${getGameBadgeColor(
-                            gameNumber
-                          )}`}
-                        >
-                          {getSelectionTypeName(selections.length)}
+                      {/* Game Number */}
+                      <div className="w-12 text-center">
+                        <span className="text-sm font-medium text-gray-700">
+                          {gameNumber}
                         </span>
                       </div>
 
-                      {/* Teams and Tournament Info */}
-                      {game && (
-                        <div className="mb-3 space-y-1">
-                          <div className="text-sm">
-                            <div
-                              className="font-medium text-blue-600 truncate"
-                              title={game.home_team}
-                            >
-                              🏠 {game.home_team || "Home Team"}
+                      {/* Teams Section */}
+                      <div className="flex-1 min-w-[200px]">
+                        {game && (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1">
+                              <div
+                                className="text-sm font-medium text-blue-600 truncate"
+                                title={game.home_team}
+                              >
+                                {game.home_team || "Home Team"}
+                              </div>
+                              <div
+                                className="text-sm font-medium text-red-600 truncate"
+                                title={game.away_team}
+                              >
+                                {game.away_team || "Away Team"}
+                              </div>
                             </div>
-                            <div
-                              className="font-medium text-red-600 truncate"
-                              title={game.away_team}
-                            >
-                              ✈️ {game.away_team || "Away Team"}
-                            </div>
+                            {(game.tournament || game.country) && (
+                              <div className="text-xs text-gray-500 truncate hidden sm:block">
+                                {game.country}{" "}
+                                {game.tournament && `• ${game.tournament}`}
+                              </div>
+                            )}
                           </div>
-                          {(game.tournament || game.country) && (
-                            <div className="text-xs text-gray-500 truncate">
-                              {game.country}{" "}
-                              {game.tournament && `• ${game.tournament}`}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
 
-                      {/* Selection Buttons with Odds */}
-                      <div className="grid grid-cols-3 gap-2">
+                      {/* Selection Buttons */}
+                      <div className="flex gap-1 min-w-[180px]">
                         {(["1", "X", "2"] as GameSelection[]).map(
                           (selection) => {
                             const isValidSelection = wouldSelectionBeValid(
@@ -640,7 +635,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                                   toggleGameSelection(gameNumber, selection)
                                 }
                                 disabled={!isValidSelection}
-                                className={`px-2 py-3 rounded text-sm font-medium transition-colors ${getGameSelectionColor(
+                                className={`flex-1 px-2 py-1.5 rounded text-sm font-medium transition-colors ${getGameSelectionColor(
                                   gameNumber,
                                   selection
                                 )}`}
@@ -650,7 +645,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                                     : undefined
                                 }
                               >
-                                <div className="text-xs leading-tight">
+                                <div className="text-xs leading-none">
                                   {selection === "1"
                                     ? "Home"
                                     : selection === "X"
@@ -658,7 +653,7 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                                     : "Away"}
                                 </div>
                                 {odds && (
-                                  <div className="text-xs mt-1 opacity-90">
+                                  <div className="text-xs mt-0.5 opacity-90">
                                     {odds.toFixed(2)}
                                   </div>
                                 )}
@@ -668,9 +663,20 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                         )}
                       </div>
 
+                      {/* Selection Type Badge */}
+                      <div className="w-16 text-center">
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-xs font-medium ${getGameBadgeColor(
+                            gameNumber
+                          )}`}
+                        >
+                          {getSelectionTypeName(selections.length)}
+                        </span>
+                      </div>
+
                       {/* Kickoff Time */}
                       {game?.kick_off_time && (
-                        <div className="text-xs text-gray-500 mt-2 text-center">
+                        <div className="text-xs text-gray-500 text-center w-20">
                           {new Date(game.kick_off_time).toLocaleDateString(
                             "en-US",
                             {
