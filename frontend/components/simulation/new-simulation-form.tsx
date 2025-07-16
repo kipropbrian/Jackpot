@@ -9,6 +9,12 @@ import {
   GameSelectionValidation,
 } from "@/lib/api/types";
 import { validateGameSelections, SPORTPESA_RULES } from "@/lib/utils";
+import countryEmoji from "country-emoji";
+
+// Helper function to get country code from country name
+const getCountryFlag = (country: string): string => {
+  return countryEmoji.flag(country) || "🏳️";
+};
 
 export interface NewSimulationFormProps {
   onSubmit?: (values: SimulationCreate) => void;
@@ -582,31 +588,67 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                         </span>
                       </div>
 
-                      {/* Teams Section */}
+                      {/* Teams Section with Date/Time Header */}
                       <div className="flex-1 min-w-[200px]">
                         {game && (
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                              <div
-                                className="text-sm font-medium text-blue-600 truncate"
-                                title={game.home_team}
-                              >
-                                {game.home_team || "Home Team"}
-                              </div>
-                              <div
-                                className="text-sm font-medium text-red-600 truncate"
-                                title={game.away_team}
-                              >
-                                {game.away_team || "Away Team"}
-                              </div>
-                            </div>
-                            {(game.tournament || game.country) && (
-                              <div className="text-xs text-gray-500 truncate hidden sm:block">
-                                {game.country}{" "}
-                                {game.tournament && `• ${game.tournament}`}
+                          <>
+                            {game.kick_off_time && (
+                              <div className="text-sm text-gray-600 mb-1">
+                                {new Date(
+                                  game.kick_off_time
+                                ).toLocaleDateString("en-US", {
+                                  weekday: "long",
+                                })}{" "}
+                                {new Date(
+                                  game.kick_off_time
+                                ).toLocaleDateString("en-US", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "2-digit",
+                                })}{" "}
+                                -{" "}
+                                {new Date(
+                                  game.kick_off_time
+                                ).toLocaleTimeString("en-US", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })}{" "}
+                                |{" "}
+                                {game.country && (
+                                  <span
+                                    className="text-base"
+                                    role="img"
+                                    aria-label={`${game.country} flag`}
+                                  >
+                                    {getCountryFlag(game.country)}
+                                  </span>
+                                )}{" "}
+                                {game.country}
                               </div>
                             )}
-                          </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1">
+                                <div
+                                  className="text-sm font-medium text-blue-600 truncate"
+                                  title={game.home_team}
+                                >
+                                  {game.home_team || "Home Team"}
+                                </div>
+                                <div
+                                  className="text-sm font-medium text-red-600 truncate"
+                                  title={game.away_team}
+                                >
+                                  {game.away_team || "Away Team"}
+                                </div>
+                              </div>
+                              {(game.tournament || game.country) && (
+                                <div className="text-xs text-gray-500 truncate hidden sm:block">
+                                  {game.tournament}
+                                </div>
+                              )}
+                            </div>
+                          </>
                         )}
                       </div>
 
@@ -647,10 +689,10 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                               >
                                 <div className="text-xs leading-none">
                                   {selection === "1"
-                                    ? "Home"
+                                    ? "HOME"
                                     : selection === "X"
-                                    ? "Draw"
-                                    : "Away"}
+                                    ? "DRAW"
+                                    : "AWAY"}
                                 </div>
                                 {odds && (
                                   <div className="text-xs mt-0.5 opacity-90">
@@ -673,21 +715,6 @@ const NewSimulationForm: React.FC<NewSimulationFormProps> = ({ onSubmit }) => {
                           {getSelectionTypeName(selections.length)}
                         </span>
                       </div>
-
-                      {/* Kickoff Time */}
-                      {game?.kick_off_time && (
-                        <div className="text-xs text-gray-500 text-center w-20">
-                          {new Date(game.kick_off_time).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </div>
-                      )}
                     </div>
                   );
                 }

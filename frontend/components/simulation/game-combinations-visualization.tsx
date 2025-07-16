@@ -1,4 +1,5 @@
 import { BetSpecification, Game as APIGame } from "@/lib/api/types";
+import countryEmoji from "country-emoji";
 
 interface GameCombinationsVisualizationProps {
   specification: BetSpecification | null;
@@ -6,6 +7,11 @@ interface GameCombinationsVisualizationProps {
   games?: APIGame[];
   actualResults?: string[];
 }
+
+// Helper function to get country code from country name
+const getCountryFlag = (country: string): string => {
+  return countryEmoji.flag(country) || "🏳️";
+};
 
 export function GameCombinationsVisualization({
   specification,
@@ -154,52 +160,92 @@ export function GameCombinationsVisualization({
                 >
                   {/* Game Number */}
                   <div className="w-12 text-center">
-                    <span className="text-sm font-medium text-gray-700">
+                    <div className="text-sm font-medium text-gray-700 flex items-center justify-center">
                       {gameNumber}
-                    </span>
-                    {actualResult && (
-                      <span
-                        className={`flex items-center justify-center w-5 h-5 rounded-full ${
-                          isCorrect
-                            ? "bg-green-100 text-green-600"
-                            : "bg-red-100 text-red-600"
-                        }`}
-                      >
-                        {isCorrect ? "✓" : "✗"}
-                      </span>
-                    )}
+                      {actualResult && (
+                        <span
+                          className={`ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs ${
+                            isCorrect
+                              ? "bg-green-100 text-green-600"
+                              : "bg-red-100 text-red-600"
+                          }`}
+                        >
+                          {isCorrect ? "✓" : "✗"}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Teams Section */}
+                  {/* Teams Section with Date/Time Header */}
                   <div className="flex-1 min-w-[200px]">
                     {game && (
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1">
-                          <div
-                            className="text-sm font-medium text-blue-600 truncate"
-                            title={game.home_team}
-                          >
-                            {game.home_team || "Home Team"}
-                          </div>
-                          <div
-                            className="text-sm font-medium text-red-600 truncate"
-                            title={game.away_team}
-                          >
-                            {game.away_team || "Away Team"}
-                          </div>
-                          {game.score_home !== undefined &&
-                            game.score_away !== undefined && (
-                              <div className="text-xs font-bold text-gray-900">
-                                Score: {game.score_home} - {game.score_away}
-                              </div>
-                            )}
-                        </div>
-                        {game.tournament && (
-                          <div className="text-xs text-gray-500 truncate hidden sm:block">
-                            {game.tournament}
+                      <>
+                        {game.kick_off_time && (
+                          <div className="text-sm text-gray-600 mb-1">
+                            {new Date(game.kick_off_time).toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "long",
+                              }
+                            )}{" "}
+                            {new Date(game.kick_off_time).toLocaleDateString(
+                              "en-US",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                              }
+                            )}{" "}
+                            -{" "}
+                            {new Date(game.kick_off_time).toLocaleTimeString(
+                              "en-US",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: false,
+                              }
+                            )}{" "}
+                            |{" "}
+                            {game.country && (
+                              <span
+                                className="text-base"
+                                role="img"
+                                aria-label={`${game.country} flag`}
+                              >
+                                {getCountryFlag(game.country)}
+                              </span>
+                            )}{" "}
+                            {game.country}
                           </div>
                         )}
-                      </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <div
+                              className="text-sm font-medium text-blue-600 truncate"
+                              title={game.home_team}
+                            >
+                              {game.home_team || "Home Team"}
+                            </div>
+                            <div
+                              className="text-sm font-medium text-red-600 truncate"
+                              title={game.away_team}
+                            >
+                              {game.away_team || "Away Team"}
+                            </div>
+                            {game.score_home !== undefined &&
+                              game.score_away !== undefined && (
+                                <div className="text-xs font-bold text-gray-900">
+                                  Score: {game.score_home} - {game.score_away}
+                                </div>
+                              )}
+                          </div>
+                          {game.tournament && (
+                            <div className="text-xs text-gray-500 truncate hidden sm:block">
+                              {game.tournament}
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
 
@@ -213,7 +259,11 @@ export function GameCombinationsVisualization({
                         )}`}
                       >
                         <div className="leading-none">
-                          {getSelectionDisplayName(selection)}
+                          {selection === "1"
+                            ? "HOME"
+                            : selection === "X"
+                            ? "DRAW"
+                            : "AWAY"}
                         </div>
                         {game && (
                           <div className="mt-0.5 opacity-90">
