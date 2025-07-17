@@ -64,18 +64,7 @@ export function GameCombinationsVisualization({
     }
   };
 
-  const getSelectionDisplayName = (selection: string) => {
-    switch (selection) {
-      case "1":
-        return "Home";
-      case "X":
-        return "Draw";
-      case "2":
-        return "Away";
-      default:
-        return selection;
-    }
-  };
+
 
   const getSelectionButtonColor = (selection: string) => {
     switch (selection) {
